@@ -10,23 +10,50 @@ Version: 1.0
 Author URI: http://nerdlife.net/
 */
 
-//make sure we can use $wpdb: only needed so the activate check doesn't fail
-global $wpdb;
+/** Copyright 2008 Brian Krausz (email : brian@nerdlife.net)
+ *
+ *  This file is part of Custom Taxonomies.
 
-$custax_db_version = '1.0';
+ *  Custom Taxonomies is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by the
+ *  Free Software Foundation, either version 3 of the License, or (at your 
+ *  option) any later version.
+ *
+ *  Custom Taxonomies is distributed in the hope that it will be useful, but 
+ *  WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY 
+ *  or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License 
+ *  for more details.
+ *
+ *  You should have received a copy of the GNU General Public License along 
+ *  with Custom Taxonomies.  If not, see <http://www.gnu.org/licenses/>.
+ **/
 
+//the plugin directory
 $custax_dir = dirname(__FILE__);
-$custax_js_url = WP_PLUGIN_URL.'/'.basename($custax_dir).'/js';
-
 require_once($custax_dir . '/custax.class.php');
 require_once($custax_dir . '/edit-taxonomies.php');
 require_once($custax_dir . '/taxonomy_functions.php');
 
+//make sure we can use $wpdb: only needed so the activate check doesn't fail
+global $wpdb, $custax_db_version;
+
+//the version of the DB
+$custax_db_version = '1.0';
+
+//the URL of our JS directory
+$custax_js_url = WP_PLUGIN_URL.'/'.basename($custax_dir).'/js';
+
 //anything that could conflict with ids and such in edit pages
 $custax_reserved_slugs = array('post_tag', 'category', 'link_category', 'cat', 'status', 'author', 'type', 'id', 'slug', 'template', 'title', 'name', 'author_override', 'private', 'url', 'description', 'target', 'rel', 'image', 'rss', 'notes', 'rating');
 
-$custax_taxonomies = array();
+//anything that could show a select box for a taxonomy and therefore needs our style definitions
+$custax_style_pages = array(
+	'post-new.php', 'post.php', 
+	'page-new.php', 'page.php', 
+	'link-add.php', 'link.php');
 
+//build the list of custax objects
+$custax_taxonomies = array();
 $wpdb->custom_taxonomies = $wpdb->prefix . 'custom_taxonomies';
 $taxes = $wpdb->get_results('SELECT * FROM '.$wpdb->custom_taxonomies);
 if($taxes) {
@@ -38,7 +65,6 @@ if($taxes) {
 register_activation_hook(__FILE__, 'custax_install');
 
 wp_register_script( 'admin-terms', $custax_js_url.'/terms.js', array('wp-lists'), '20081223' );
-
 wp_register_script( 'inline-edit-custax', $custax_js_url.'/inline-edit.js', array( 'jquery', 'jquery-form' ), '20081223' );
 wp_localize_script( 'inline-edit-custax', 'inlineEditL10n', array(
 	'error' => __('Error while saving the changes.'),
@@ -48,16 +74,11 @@ wp_localize_script( 'inline-edit-custax', 'inlineEditL10n', array(
 add_action('admin_menu', 'custax_menu');
 add_action('wp_ajax_inline-save-custax', 'custax_inline_edit');
 
-$custax_style_pages = array(
-	'post-new.php', 'post.php', 
-	'page-new.php', 'page.php', 
-	'link-add.php', 'link.php');
-
 foreach($custax_style_pages AS $page)
 	add_action('admin_head-'.$page, 'custax_styles');
 
 function custax_menu() {
-	add_options_page('Taxonomies', 'Taxonomies', 9, __FILE__, 'custax_edit');
+	add_options_page('Taxonomies', 'Taxonomies', 9, 'custax_edit', 'custax_edit');
 }
 
 function custax_style_implode($front, $back, $between = false) {
@@ -84,70 +105,70 @@ function custax_style_implode($front, $back, $between = false) {
 
 function custax_styles() {
 	//TODO: use classes so we don't need style_implode
-?>
-<style type="text/css">
-<?php custax_style_implode('#', 'div div.ui-tabs-panel'); ?> {
-	height: 150px;
-	overflow: auto;
-	padding: 0.5em 0.9em;
-}
+	?>
+	<style type="text/css">
+	<?php custax_style_implode('#', 'div div.ui-tabs-panel'); ?> {
+		height: 150px;
+		overflow: auto;
+		padding: 0.5em 0.9em;
+	}
 
-<?php custax_style_implode('#', 'div ul'); ?> {
-	list-style-image: none;
-	list-style-position: outside;
-	list-style-type: none;
-	margin: 0;
-	padding: 0;
-}
+	<?php custax_style_implode('#', 'div ul'); ?> {
+		list-style-image: none;
+		list-style-position: outside;
+		list-style-type: none;
+		margin: 0;
+		padding: 0;
+	}
 
-<?php custax_style_implode('ul.', 'checklist li'); ?> {
-	line-height: 19px;
-	margin: 0;
-	padding: 0;
-}
+	<?php custax_style_implode('ul.', 'checklist li'); ?> {
+		line-height: 19px;
+		margin: 0;
+		padding: 0;
+	}
 
-<?php custax_style_implode('#', 'checklist ul', 'div ul.'); ?> {
-	margin-left: 18px;
-}
+	<?php custax_style_implode('#', 'checklist ul', 'div ul.'); ?> {
+		margin-left: 18px;
+	}
 
-<?php custax_style_implode('#side-info-column #', '-tabs'); ?> {
-	margin-bottom: 3px;
-}
+	<?php custax_style_implode('#side-info-column #', '-tabs'); ?> {
+		margin-bottom: 3px;
+	}
 
-<?php custax_style_implode('#side-info-column #', '-tabs li'); ?> {
-	display: inline;
-	padding-right: 8px;
-}
+	<?php custax_style_implode('#side-info-column #', '-tabs li'); ?> {
+		display: inline;
+		padding-right: 8px;
+	}
 
-<?php custax_style_implode('#', '-tabs li.ui-tabs-selected'); ?> {
-	background-color: #F1F1F1;
-}
+	<?php custax_style_implode('#', '-tabs li.ui-tabs-selected'); ?> {
+		background-color: #F1F1F1;
+	}
 
-#side-info-column .term-add input {
-	width: 94%;
-}
+	#side-info-column .term-add input {
+		width: 94%;
+	}
 
-#side-info-column .term-add select {
-	width: 100%;
-}
+	#side-info-column .term-add select {
+		width: 100%;
+	}
 
-#side-info-column .term-add input {
-	width: 94%;
-}
+	#side-info-column .term-add input {
+		width: 94%;
+	}
 
-#side-info-column .term-add .term-add-submit {
-	width: auto;
-}
+	#side-info-column .term-add .term-add-submit {
+		width: auto;
+	}
 
-<?php custax_style_implode('#side-info-column #', '-tabs .ui-tabs-selected a'); ?> {
-	color: #333333;
-}
+	<?php custax_style_implode('#side-info-column #', '-tabs .ui-tabs-selected a'); ?> {
+		color: #333333;
+	}
 
-<?php custax_style_implode('#side-info-column #', '-tabs a'); ?> {
-	text-decoration: none;
-}
-</style>
-<?php
+	<?php custax_style_implode('#side-info-column #', '-tabs a'); ?> {
+		text-decoration: none;
+	}
+	</style>
+	<?php
 }
 
 function custax_inline_edit() {
@@ -200,5 +221,7 @@ function custax_install() {
 
 		add_option("custax_db_version", $custax_db_version);
 	}
+
+	//TODO: update DB check (not needed until we actually change our DB)
 }
 ?>

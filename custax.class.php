@@ -41,6 +41,7 @@ class custax {
 		$this->show_column = $tax->show_column;
 
 		$args = array(
+			'query_var' => $this->slug,
 			'hierarchical' => $this->hierarchical,
 		);
 		register_taxonomy($this->slug, $this->object_type, $args);

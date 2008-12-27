@@ -33,6 +33,7 @@ $custax_dir = dirname(__FILE__);
 require_once($custax_dir . '/custax.class.php');
 require_once($custax_dir . '/edit-taxonomies.php');
 require_once($custax_dir . '/taxonomy_functions.php');
+require_once($custax_dir . '/taxonomy_template.php');
 
 //make sure we can use $wpdb: only needed so the activate check doesn't fail
 global $wpdb;

@@ -247,3 +247,4 @@ function custax_wp_term_checklist( $taxonomy, $post_id = 0, $descendants_and_sel
         echo call_user_func_array(array(&$walker, 'walk'), array($terms, 0, $args));
 }
 
+?>

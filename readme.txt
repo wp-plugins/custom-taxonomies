@@ -57,4 +57,4 @@ complicated.
 
 == Screenshots ==
 
-1. A dynamically generated term edit screen
+1. A dynamically generated term edit screen. [Full size](http://wordpress.org/extend/plugins/custom-taxonomies/screenshot-1.png)

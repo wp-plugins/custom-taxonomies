@@ -36,6 +36,12 @@ the taxonomies themselves.  This plugin allows you to:
 *  [is_term](http://codex.wordpress.org/Function_Reference/is_term)
 *  [wp_get_object_terms](http://codex.wordpress.org/Function_Reference/wp_get_object_terms)
 
+= Example Use =
+
+Here are some examples of how you can implement the taxonomies in your themes:
+
+*   Coming soon
+
 == Frequently Asked Questions ==
 
 = Isn't Automattic going to develop this into Wordpress? =
@@ -52,9 +58,3 @@ complicated.
 == Screenshots ==
 
 1. A dynamically generated term edit screen
-
-== Example Use ==
-
-Here are some examples of how you can implement the taxonomies in your themes:
-
-*   Coming soon

@@ -11,7 +11,7 @@ and using taxonomies beyond the standard Tags and Categories.
 
 == Description ==
 
-Wordpress provides a lot of functionality geared towards the use of 
+WordPress provides a lot of functionality geared towards the use of 
 generic "taxonomies", such as Tags and Categories, but no way to manage 
 the taxonomies themselves.  This plugin allows you to:
 
@@ -48,12 +48,12 @@ Here are some examples of how you can implement the taxonomies in your themes:
 
 = Known Issues =
 
-There seems to be a bug in Wordpress that makes listing objects in a taxonomy show page drafts.  There exist workaround, and they are being investigated.  
-See [this bug](http://trac.wordpress.org/ticket/8731).
+There seems to be a bug in WordPress that makes listing objects in a taxonomy show page drafts.  There exist workaround, and they are being 
+investigated.  See [this bug](http://trac.wordpress.org/ticket/8731).
 
 == Frequently Asked Questions ==
 
-= Isn't Automattic going to develop this into Wordpress? =
+= Isn't Automattic going to develop this into WordPress? =
 
 In theory yes, the functionality is all there, all Automattic has to do 
 is build the functionality into the administrative interface.  The 

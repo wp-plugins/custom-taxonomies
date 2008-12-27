@@ -41,14 +41,15 @@ the taxonomies themselves.  This plugin allows you to:
 Here are some examples of how you can implement the taxonomies in your themes:
 
 * Display a comma-seperated list of taxonomy 'thing' in the format "Things: Thing 1, Thing 2":
+
 `<?php if(function_exists('custax_the_terms')) custax_the_terms('thing', 'Things: ', ', ', '<br />'); ?>`
 
-* More examples coming soon, especially once a workaround is found for (this bug)[http://trac.wordpress.org/ticket/8731].
+* More examples coming soon, especially once a workaround is found for [this bug](http://trac.wordpress.org/ticket/8731).
 
 = Known Issues =
 
 There seems to be a bug in Wordpress that makes listing objects in a taxonomy show page drafts.  There exist workaround, and they are being investigated.  
-See (this bug)[http://trac.wordpress.org/ticket/8731].
+See [this bug](http://trac.wordpress.org/ticket/8731).
 
 == Frequently Asked Questions ==
 

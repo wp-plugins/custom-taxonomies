@@ -1,8 +1,5 @@
 <?php
 //TODO: organize this more
-//TODO: more validation (plural, reserved names)
-//TODO: limit editing
-//TODO: inquire on deleting (remove term links?)
 //TODO: us wpnonce and wp_check_referrer
 
 function custax_get_tax($id) {
@@ -26,18 +23,20 @@ function custax_get_taxes() {
 	return $results;
 }
 
+/**
+ * custax_update_tax is not used right now without being called by 
+ * custax_insert_tax since editing gets complicated and can break things
+ **/
 function custax_update_tax($id, $row) {
 	global $wpdb;
-
-        if(empty($row['slug']))
-		$row['slug'] = sanitize_title_with_dashes($row['name']);
 
 	$h = $row['hierarchical']?1:0;
 	$m = $row['multiple']?1:0;
 	$t = $row['tag_style']?1:0;
 	$d = $row['descriptions']?1:0;
+	$s = $row['show_column']?1:0;
 
-	$args = array($row['name'], $row['plural'], $row['object_type'], $row['slug'], $h, $m, $t, $d);
+	$args = array($row['name'], $row['plural'], $row['object_type'], $row['slug'], $h, $m, $t, $d, $s);
 
 	$query = '';
 	if($id)
@@ -45,7 +44,7 @@ function custax_update_tax($id, $row) {
 	else
 		$query .= 'INSERT INTO ';
 
-	$query .= $wpdb->custom_taxonomies.' SET name = %s, plural = %s, object_type = %s, slug = %s, hierarchical = %d, multiple = %d, tag_style = %d, descriptions = %d';
+	$query .= $wpdb->custom_taxonomies.' SET name = %s, plural = %s, object_type = %s, slug = %s, hierarchical = %d, multiple = %d, tag_style = %d, descriptions = %d, show_column = %d';
 
 	if($id) {
 		$query .= ' WHERE id = %d';
@@ -62,10 +61,28 @@ function custax_insert_tax($row) {
 	return custax_update_tax( 0, $row );
 }
 
-function custax_delete_tax($id) {
+/**
+ * custax_delete_tax
+ *
+ * $delete_terms right now is always true, since the logistics of leaving 
+ * terms get wonky.  Perhaps make an advanced setting for experiences 
+ * taxonomists?
+ **/
+function custax_delete_tax($id, $delete_terms = true) {
 	global $wpdb;
 
-	return $wpdb->query( $wpdb->prepare('DELETE FROM '.$wpdb->custom_taxonomies.' WHERE id = %d', $id) );
+	$slug = $wpdb->get_var( $wpdb->prepare('SELECT slug FROM '.$wpdb->custom_taxonomies.' WHERE id = %d', $id) );
+
+	$delete = $wpdb->query( $wpdb->prepare('DELETE FROM '.$wpdb->custom_taxonomies.' WHERE id = %d', $id) );
+	if(!$delete || is_wp_error($delete))
+		return $delete;
+
+	if($delete_terms) {
+		$terms = get_terms($slug, array('fields'=>'ids', 'hide_empty'=>false));
+		foreach($terms AS $term) {
+			wp_delete_term((int)$term, $slug);
+		}
+	}
 }
 
 function custax_tax_row( $tax, $class = '' ) {
@@ -79,13 +96,12 @@ function custax_tax_row( $tax, $class = '' ) {
 	$out = '';
 	$out .= '<tr id="tax-' . $tax->id . '"' . $class . '>';
 
-                        $class = "class=\"$column_name column-$column_name\"";
-
+	$class = "class=\"$column_name column-$column_name\"";
 
 	$out .= '<td class="name column-name><strong><a class="row-title" href="' . $edit_link . '" title="' . attribute_escape(sprintf(__('Edit "%s"'), $name)) . '">' . $name . '</a></strong><br />';
 	$actions = array();
-	$actions['edit'] = '<a href="' . $edit_link . '">' . __('Edit') . '</a>';
-	$actions['delete'] = "<a class='submitdelete' href='" . wp_nonce_url($delete_link, 'delete-tax_' . $tax->id) . "' onclick=\"if ( confirm('" . js_escape(sprintf(__("You are about to delete this taxonomy '%s'\n 'Cancel' to stop, 'OK' to delete."), $name )) . "') ) { return true;}return false;\">" . __('Delete') . "</a>";
+//	$actions['edit'] = '<a href="' . $edit_link . '">' . __('Edit') . '</a>';
+	$actions['delete'] = "<a class='submitdelete' href='" . wp_nonce_url($delete_link, 'delete-tax_' . $tax->id) . "' onclick=\"if ( confirm('" . js_escape(sprintf(__("You are about to delete this taxonomy '%s' along with ALL terms associated with this taxonomy.  Please be SURE you want to do this.\n 'Cancel' to stop, 'OK' to delete."), $name )) . "') ) { return true;}return false;\">" . __('Delete') . "</a>";
 	$action_count = count($actions);
 	$i = 0;
 	$out .= '<div class="row-actions">';
@@ -128,10 +144,9 @@ function custax_tax_rows( ) {
 }
 
 function custax_edit() {
-	global $action;
+	global $action, $custax_reserved_slugs;
 
         $cols = array(
-//            'cb' => '<input type="checkbox" />',
             'name' => __('Name'),
             'slug' => __('Slug'),
             'terms' => __('Terms'),
@@ -150,8 +165,17 @@ function custax_edit() {
 	wp_reset_vars( array('action', 'tax') );
 
 	switch($action) {
-//TODO: input validation
 	case 'addtax':
+		if(!$_POST['name'] || !$_POST['plural']) {
+			$message = 6;
+			break;
+		}
+	        if(empty($_POST['slug']))
+			$_POST['slug'] = sanitize_title_with_dashes($_POST['name']);
+		if(in_array($_POST['slug'], $custax_reserved_slugs)) {
+			$message = 7;
+			break;
+		}
 		$ret = custax_insert_tax($_POST);
 		if ( $ret && !is_wp_error( $ret ) ) {
 			$message = 1;
@@ -160,6 +184,11 @@ function custax_edit() {
 		}
 	break;
 
+	/** 
+	 * TODO: allow some limited form of editing (perhaps only things like 
+	 * show_columns and descriptions
+	 **/
+	/*
 	case 'edittax':
 		$tax_ID = (int) $_GET['tax_ID'];
 
@@ -170,6 +199,7 @@ function custax_edit() {
 			$message = 5;
 		}
 	break;
+	*/
 
 	case 'delete':
 		$tax_ID = (int) $_GET['tax_ID'];
@@ -183,6 +213,7 @@ function custax_edit() {
 		$message = 2;
 	break;
 
+	/*
 	case 'edit':
 		$tax_ID = (int) $_GET['tax_ID'];
 
@@ -193,13 +224,16 @@ function custax_edit() {
 		$new_action = 'edittax';
 
 	break;
+	*/
+	}
 
-}
 	$messages[1] = __('Taxonomy added.');
 	$messages[2] = __('Taxonomy deleted.');
 	$messages[3] = __('Taxonomy updated.');
 	$messages[4] = __('Taxonomy not added.');
 	$messages[5] = __('Taxonomy not updated.');
+	$messages[6] = __('Name and plural are both required.');
+	$messages[7] = __('You\'ve used a reserved slug: try a different one.');
 ?>
 <div class="wrap nosubsub">
 <?php screen_icon(); ?>
@@ -237,46 +271,6 @@ function custax_edit() {
 <?php custax_tax_rows( ); ?>
 	</tbody>
 </table>
-<!-- //TODO: put this in intelligent place -->
-<script type="text/javascript">
-jQuery(function($) {
-	var options = false
-	if ( document.forms['addtax'].taxonomy_parent )
-		options = document.forms['addtax'].taxonomy_parent.options;
-
-	var addAfter = function( r, settings ) {
-		var name = $("<span>" + $('name', r).text() + "</span>").html();
-		var id = $('taxonomy', r).attr('id');
-		options[options.length] = new Option(name, id);
-
-		addAfter2( r, settings );
-	}
-
-	var addAfter2 = function( x, r ) {
-		var t = $(r.parsed.responses[0].data);
-		if ( t.length == 1 )
-			inlineEditTax.addEvents($(t.id));
-	}
-
-	var delAfter = function( r, settings ) {
-		var id = $('tax', r).attr('id');
-		for ( var o = 0; o < options.length; o++ )
-			if ( id == options[o].value )
-				options[o] = null;
-	}
-
-	if ( options )
-		$('#the-list').wpList( { addAfter: addAfter, delAfter: delAfter } );
-	else
-		$('#the-list').wpList({ addAfter: addAfter2 });
-
-	if ( jQuery('#link-taxonomy-search-input').size() ) {
-		columns.init('edit-link-taxonomies');
-	} else {
-		columns.init('taxonomies');
-	}
-});
-</script>
 <br class="clear" />
 </div>
 </div><!-- /col-right -->
@@ -286,6 +280,10 @@ jQuery(function($) {
 
 <div class="form-wrap">
 <h3><?php echo $subtitle; ?></h3>
+<p>
+<strong><?php _e('Note:'); ?></strong><br />
+<?php _e('Taxonomies cannot be edited, only created and deleted.  This is because of the logistical complexities of changing settings such as nested items and multiple selections.  If you want to change a setting, please note the terms and taxonomies and recreate them.  In the future we will try to add some limited editing so this is less annoying.'); ?>
+</p>
 <form name="addtax" id="addtax" method="post" action="<?php echo $self ?>" class="add:the-list: validate">
 <input type="hidden" name="action" value="<?php echo $new_action ?>" />
 
@@ -325,13 +323,18 @@ jQuery(function($) {
 	<?php _e('Allow nested terms') ?></p>
 
 	<p><input name="multiple" id="multiple" type="checkbox" value="1" style="width:20px;margin-top:0;" <?php checked($tax->multiple, true)?> />
-	<?php _e('Allow multiple selections for each item') ?></p>
+	<?php _e('Allow multiple selections for each item'); ?>
+	<?php echo '<br /><strong>'.__('Note:').'</strong> '.__('This has not been implemented yet.'); ?></p>
 
 	<p><input name="tag_style" id="tag_style" type="checkbox" value="1" style="width:20px;margin-top:0;" <?php checked($tax->tag_style, true)?> />
-	<?php _e('Use tag-style selection, encouraging arbitrary term creation (works best with multiple selections, but not required)') ?></p>
+	<?php _e('Use tag-style selection, encouraging arbitrary term creation (works best with multiple selections, but not required)') ?>
+	<?php echo '<br /><strong>'.__('Note:').'</strong> '.__('This has not been implemented yet.'); ?></p>
 
 	<p><input name="descriptions" id="descriptions" type="checkbox" value="1" style="width:20px;margin-top:0;" <?php checked($tax->descriptions, true)?> />
 	<?php _e('Allow descriptions') ?></p>
+
+	<p><input name="show_column" id="show_column" type="checkbox" value="1" style="width:20px;margin-top:0;" <?php checked($tax->show_column, true)?> />
+	<?php _e('Show taxonomy on manage screen') ?></p>
 </div>
 
 <p class="submit"><input type="submit" class="button" name="submit" value="<?php echo $submit; ?>" /></p>

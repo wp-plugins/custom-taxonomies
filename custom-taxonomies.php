@@ -2,12 +2,16 @@
 /*
 Plugin Name: Custom Taxonomies
 Plugin URI: http://nerdlife.net/
-Description: Custom Taxonomies provides a full administrative interface for creating and using taxonomies beyond the standard Tags and Categories 
-offered in the default Wordpress installation.
+Description: Custom Taxonomies provides a full administrative interface for 
+creating and using taxonomies beyond the standard Tags and Categories offered 
+in the default Wordpress installation.
 Author: Brian Krausz
 Version: 0.5
 Author URI: http://nerdlife.net/
 */
+
+//make sure we can use $wpdb: only needed so the activate check doesn't fail
+global $wpdb;
 
 $custax_dir = dirname(__FILE__);
 $custax_js_url = WP_PLUGIN_URL.'/'.basename($custax_dir).'/js';
@@ -15,6 +19,9 @@ $custax_js_url = WP_PLUGIN_URL.'/'.basename($custax_dir).'/js';
 require_once($custax_dir . '/custax.class.php');
 require_once($custax_dir . '/edit-taxonomies.php');
 require_once($custax_dir . '/taxonomy_functions.php');
+
+//anything that could conflict with ids and such in edit pages
+$custax_reserved_slugs = array('post_tag', 'category', 'link_category', 'cat', 'status', 'author', 'type', 'id', 'slug', 'template', 'title', 'name', 'author_override', 'private', 'url', 'description', 'target', 'rel', 'image', 'rss', 'notes', 'rating');
 
 $custax_taxonomies = array();
 

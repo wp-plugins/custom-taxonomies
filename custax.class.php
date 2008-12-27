@@ -10,7 +10,6 @@ class custax {
 	var $hierarchical;
 	var $multiple;
 	var $descriptions;
-//TODO: impelement setting this!
 	var $show_column;
 
 	function custax($tax) {
@@ -26,8 +25,6 @@ class custax {
 
 		$args = array(
 			'hierarchical' => $this->hierarchical,
-//TODO: count?
-			'update_count_callback' => '_update_post_term_count'
 		);
 		register_taxonomy($this->slug, $this->object_type, $args);
 
@@ -39,6 +36,19 @@ class custax {
 
 		add_action('admin_menu', array(&$this, 'register_column'), 5);
 		add_action('admin_menu', array(&$this, 'admin_menu'));
+
+		switch($this->object_type) {
+		case 'link':
+			$this->manage_page = 'link-manager.php';
+		break;
+		case 'page':
+			$this->manage_page = 'edit-pages.php';
+		break;
+		default:
+			$this->object_type = 'post';
+			$this->manage_page = 'edit.php';
+		break;
+		}
 
 		if($this->object_type == 'link') {
 			add_action('add_link', array(&$this, 'save'));
@@ -52,14 +62,15 @@ class custax {
 			$add_object_page_suffix = 'new';
 		}
 
-		$dir = basename(dirname(__FILE__));
-		$edit_term_hook_name = 'admin_print_scripts-' . $this->object_type . 's_page_' . $dir . '/custax.class';
+		$edit_term_hook_name = 'admin_print_scripts-' . $this->object_type . 's_page_custax_' . $this->slug;
 		add_action( $edit_term_hook_name, array(&$this, 'enqueue_scripts') );
 
-		$add_object_hook_name  = 'admin_head-' . $this->object_type . '-' . $add_object_page_suffix . '.php';
-		$edit_object_hook_name = 'admin_head-' . $this->object_type . '.php';
-		add_action( $add_object_hook_name,  array(&$this, 'select_scripts'), 20 );
-		add_action( $edit_object_hook_name, array(&$this, 'select_scripts'), 20 );
+		$add_object_hook_end  = $this->object_type . '-' . $add_object_page_suffix . '.php';
+		$edit_object_hook_end = $this->object_type . '.php';
+		add_action( 'admin_print_scripts-' . $add_object_hook_end,  array(&$this, 'select_enqueue_scripts') );
+		add_action( 'admin_print_scripts-' . $edit_object_hook_end, array(&$this, 'select_enqueue_scripts') );
+		add_action( 'admin_head-' . $add_object_hook_end,  array(&$this, 'select_scripts'), 20 );
+		add_action( 'admin_head-' . $edit_object_hook_end, array(&$this, 'select_scripts'), 20 );
 	}
 
 	function save($id) {
@@ -118,24 +129,35 @@ class custax {
 		}
 	}
 
-    function manage_column($name, $id) {
-echo 'foo';
-	//TODO: manage_column, display all terms
-    }
-
-    function manage_column_name($cols) {
-	$ends = array('comments', 'date', 'rel', 'visible');
-	$end = array();
-	foreach($cols AS $k=>$v) {
-	    if(in_array($k, $ends)) {
-		$end[$k] = $v;
-		unset($cols[$k]);
-	    }
+	function manage_column($name, $id) {
+		if($name != $this->slug)
+			return;
+		$terms = wp_get_object_terms($id, $this->slug);
+		$first = true;
+		foreach($terms AS $term) {
+			if($first)
+				$first = false;
+			else
+				echo ', ';
+			echo '<a href="' . $this->manage_page . '?taxonomy=' . $this->slug . '&amp;term=' . $term->slug . '">';
+			echo $term->name;
+			echo '</a>';
+		}
 	}
-	$cols[$this->slug] = $this->plural;
-	$cols = array_merge($cols, $end);
-	return $cols;
-    }
+
+	function manage_column_name($cols) {
+		$ends = array('comments', 'date', 'rel', 'visible');
+		$end = array();
+		foreach($cols AS $k=>$v) {
+			if(in_array($k, $ends)) {
+				$end[$k] = $v;
+				unset($cols[$k]);
+			}
+		}
+		$cols[$this->slug] = $this->plural;
+		$cols = array_merge($cols, $end);
+		return $cols;
+	}
 
 	function admin_menu() {
 //TODO: add option for modify permissions level (admin vs. contributor)??
@@ -143,20 +165,7 @@ echo 'foo';
 
 		add_meta_box($this->slug.'div', $this->plural, array(&$this, 'select'), $this->object_type, 'side');
 
-		switch($this->object_type) {
-		case 'link':
-			$page_parent = 'link-manager.php';
-		break;
-		case 'page':
-			$page_parent = 'edit-pages.php';
-		break;
-		default:
-			$this->object_type = 'post';
-			$page_parent = 'edit.php';
-		break;
-		}
-
-		add_submenu_page($page_parent, $this->plural, $this->plural, $capability, __FILE__, array(&$this, 'manage'));
+		add_submenu_page($this->manage_page, $this->plural, $this->plural, $capability, 'custax_' . $this->slug, array(&$this, 'manage'));
 	}
 
 	function ajax_quick_add() {
@@ -172,6 +181,7 @@ echo 'foo';
 		$popular_ids = isset( $_POST['popular_ids'] ) ? array_map( 'absint', explode( ',', $_POST['popular_ids'] ) ) : false;
 
 		$x = new WP_Ajax_Response();
+
 		foreach ( $names as $term_name ) {
 			$term_name = trim($term_name);
 			$term_nicename = sanitize_title($term_name);
@@ -272,8 +282,8 @@ echo 'foo';
 		die();
 	}
 
-	function update_count() {
-//TODO: what is _wp_update_count, does it need custom counterpart
+	function select_enqueue_scripts() {
+		wp_enqueue_script('jquery-ui-tabs');
 	}
 
 	function select_scripts() {
@@ -351,7 +361,6 @@ echo 'foo';
 	}
 
 	function select($object) {
-//TODO: allow multiple = 0
 	?>
 	<ul id="<?php echo $this->slug; ?>-tabs" class="ui-tabs-nav">
 		<li class="ui-tabs-selected"><a tabindex="3" href="#<?php echo $this->slug; ?>-all">All <?php echo $this->plural; ?></a></li>
@@ -389,18 +398,6 @@ echo 'foo';
 	endif;
 	}
 
-	function manage_row($alt) {
-		$edit_link = $_SERVER['REQUEST_URI'].'?page='.$_GET['page'].'&amp;tax_id='.$this->id;
-		echo '<tr id="link-'.$this->id.'" valign="middle" '.($alt?'class="alternate"':'').'>';
-		echo '<th scope="row" class="check-column"><input type="checkbox" name="linkcheck[]" value="'.$this->id.'" /></th>';
-		echo '<td class="column-name"><strong><a class="row-title" href="'.$edit_link.'" title="Edit &quot;'.$this->name.'&quot;">'.$this->name.'</a></strong><br />';
-		echo '<div class="row-actions"><span class="edit"><a href="'.$edit_link.'">Edit</a> | </span><span class="delete"><a class="submitdelete" href="">Delete</a></span></div></td>';
-		echo '<td class="column-slug">'.$this->slug.'</td>';
-		echo '<td class="column-object_type">'.$this->object_type.'</td>';
-		echo '<td class="column-terms">'.$this->term_count.'</td>';
-		echo '</tr>';
-	}
-
 	function _term_row( $term, $level, $name_override = false ) {
 		$self = $_SERVER['SCRIPT_NAME'].'?page='.$_GET['page'];
 
@@ -413,8 +410,7 @@ echo 'foo';
 		$row_class = 'alternate' == $row_class ? '' : 'alternate';
 
 		$count = number_format_i18n( $term->count );
-//TODO: ability to view terms with links
-		//$count = ( $count > 0 ) ? "<a href='edit.php?term=$term->slug'>$count</a>" : $count;
+		$count = ( $count > 0 ) ? "<a href='{$this->manage_page}?taxonomy={$this->slug}&amp;term={$term->slug}'>$count</a>" : $count;
 
 		$name = ( $name_override ? $name_override : $pad . ' ' . $term->name );
 		$name = apply_filters( 'term_name', $name );

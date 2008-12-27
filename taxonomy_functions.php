@@ -86,6 +86,7 @@ class Walker_Term_Checklist extends Walker {
 }
 }
 
+/* Does exist but is tied to categories despite function name */
 function custax_wp_popular_terms_checklist( $taxonomy, $default = 0, $number = 10, $echo = true ) {
         global $post_ID;
         if ( $post_ID )
@@ -185,7 +186,6 @@ function custax_dropdown_terms( $taxonomy, $default = 0, $parent = 0, $popular_i
 function custax_wp_term_checklist( $taxonomy, $post_id = 0, $descendants_and_self = 0, $selected_terms = false, $popular_terms = false ) {
         $walker = new Walker_Term_Checklist($taxonomy);
         $descendants_and_self = (int) $descendants_and_self;
-
         $args = array();
 
         if ( is_array( $selected_terms ) )
@@ -201,9 +201,15 @@ function custax_wp_term_checklist( $taxonomy, $post_id = 0, $descendants_and_sel
                 $args['popular_terms'] = get_terms( $taxonomy, array( 'fields' => 'ids', 'orderby' => 'count', 'order' => 'DESC', 'number' => 10, 'hierarchical' => false ) );
 
         if ( $descendants_and_self ) {
-                $terms = get_terms( $taxonomy, array( 'child_of' => $descendants_and_self, 'hierarchical' => 0, 'hide_empty' => 0 ) );
-                $self = get_term( $descendants_and_self, $taxonomy );
-                array_unshift( $terms, $self );
+		if(is_taxonomy_hierarchical($taxonomy)) {
+	                $terms = get_terms( $taxonomy, array( 'child_of' => $descendants_and_self, 'hierarchical' => 0, 'hide_empty' => 0 ) );
+        	        $self = get_term( $descendants_and_self, $taxonomy );
+                	array_unshift( $terms, $self );
+		}
+		else {
+        	        $self = get_term( $descendants_and_self, $taxonomy );
+			$terms = array($self);
+		}
         } else {
                 $terms = get_terms( $taxonomy, array( 'get' => 'all' ) );
         }

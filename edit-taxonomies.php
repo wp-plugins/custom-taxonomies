@@ -119,7 +119,7 @@ function custax_tax_row( $tax, $class = '' ) {
 	$out .= '<td class="name column-name><strong><a class="row-title" href="' . $edit_link . '" title="' . attribute_escape(sprintf(__('Edit "%s"'), $name)) . '">' . $name . '</a></strong><br />';
 	$actions = array();
 //	$actions['edit'] = '<a href="' . $edit_link . '">' . __('Edit') . '</a>';
-	$actions['delete'] = "<a class='submitdelete' href='" . wp_nonce_url($delete_link, 'delete-tax_' . $tax->id) . "' onclick=\"if ( confirm('" . js_escape(sprintf(__("You are about to delete this taxonomy '%s' along with ALL terms associated with this taxonomy.  Please be SURE you want to do this.\n 'Cancel' to stop, 'OK' to delete."), $name )) . "') ) { return true;}return false;\">" . __('Delete') . "</a>";
+	$actions['delete'] = "<a class='submitdelete' href='" . wp_nonce_url($delete_link, 'delete-tax_' . $tax->id) . "' onclick=\"if ( confirm('" . js_escape(sprintf(__("You are about to delete this taxonomy '%s' along with ALL terms associated with this taxonomy.  Please be SURE you want to do this.\n 'Cancel' to stop, 'OK' to delete.", CUSTAX_DOMAINS), $name )) . "') ) { return true;}return false;\">" . __('Delete') . "</a>";
 	$action_count = count($actions);
 	$i = 0;
 	$out .= '<div class="row-actions">';
@@ -174,10 +174,10 @@ function custax_edit() {
 
 	$self = $_SERVER['REQUEST_URI'];
 
-	$title = __('Taxonomies');
+	$title = __('Taxonomies', CUSTAX_DOMAIN);
 
-	$subtitle = __('Add a New Taxonomy');
-	$submit = __('Add Taxonomy');
+	$subtitle = __('Add a New Taxonomy', CUSTAX_DOMAIN);
+	$submit = __('Add Taxonomy', CUSTAX_DOMAIN);
 	$new_action = 'addtax';
 
 	wp_reset_vars( array('action', 'tax') );
@@ -237,21 +237,21 @@ function custax_edit() {
 
 		$tax = custax_get_tax($tax_ID);
 
-		$subtitle = __('Edit Taxonomy').' "'.$tax->name.'"';
-		$submit = __('Edit Taxonomy');
+		$subtitle = __('Edit Taxonomy', CUSTAX_DOMAIN).' "'.$tax->name.'"';
+		$submit = __('Edit Taxonomy', CUSTAX_DOMAIN);
 		$new_action = 'edittax';
 
 	break;
 	*/
 	}
 
-	$messages[1] = __('Taxonomy added.');
-	$messages[2] = __('Taxonomy deleted.');
-	$messages[3] = __('Taxonomy updated.');
-	$messages[4] = __('Taxonomy not added.');
-	$messages[5] = __('Taxonomy not updated.');
-	$messages[6] = __('Name and plural are both required.');
-	$messages[7] = __('You\'ve used a reserved slug: try a different one.');
+	$messages[1] = __('Taxonomy added.', CUSTAX_DOMAIN);
+	$messages[2] = __('Taxonomy deleted.', CUSTAX_DOMAIN);
+	$messages[3] = __('Taxonomy updated.', CUSTAX_DOMAIN);
+	$messages[4] = __('Taxonomy not added.', CUSTAX_DOMAIN);
+	$messages[5] = __('Taxonomy not updated.', CUSTAX_DOMAIN);
+	$messages[6] = __('Name and plural are both required.', CUSTAX_DOMAIN);
+	$messages[7] = __('You\'ve used a reserved slug: try a different one.', CUSTAX_DOMAIN);
 ?>
 <div class="wrap nosubsub">
 <?php screen_icon(); ?>
@@ -300,59 +300,59 @@ function custax_edit() {
 <h3><?php echo $subtitle; ?></h3>
 <p>
 <strong><?php _e('Note:'); ?></strong><br />
-<?php _e('Taxonomies cannot be edited, only created and deleted.  This is because of the logistical complexities of changing settings such as nested items and multiple selections.  If you want to change a setting, please note the terms and taxonomies and recreate them.  In the future we will try to add some limited editing so this is less annoying.'); ?>
+<?php _e('Taxonomies cannot be edited, only created and deleted.  This is because of the logistical complexities of changing settings such as nested items and multiple selections.  If you want to change a setting, please note the terms and taxonomies and recreate them.  In the future we will try to add some limited editing so this is less annoying.', CUSTAX_DOMAIN); ?>
 </p>
 <form name="addtax" id="addtax" method="post" action="<?php echo $self ?>" class="add:the-list: validate">
 <input type="hidden" name="action" value="<?php echo $new_action ?>" />
 
 <div class="form-field form-required">
-	<label for="name"><?php _e('Taxonomy name') ?></label>
+	<label for="name"><?php _e('Taxonomy name', CUSTAX_DOMAIN) ?></label>
 	<input name="name" id="name" type="text" value="<?php echo $tax->name; ?>" size="40" aria-required="true" />
-    <p><?php _e('The name is how the taxonomy appears on your site.'); ?></p>
+    <p><?php _e('The name is how the taxonomy appears on your site.', CUSTAX_DOMAIN); ?></p>
 </div>
 
 <div class="form-field form-required">
-	<label for="plural"><?php _e('Taxonomy name plural') ?></label>
+	<label for="plural"><?php _e('Taxonomy name plural', CUSTAX_DOMAIN) ?></label>
 	<input name="plural" id="plural" type="text" value="<?php echo $tax->plural; ?>" size="40" aria-required="true" />
-    <p><?php _e('The plural form of the name.'); ?></p>
+    <p><?php _e('The plural form of the name.', CUSTAX_DOMAIN); ?></p>
 </div>
 
 <div class="form-field">
-	<label for="slug"><?php _e('Taxonomy slug') ?></label>
+	<label for="slug"><?php _e('Taxonomy slug', CUSTAX_DOMAIN) ?></label>
 	<input name="slug" id="slug" type="text" value="<?php echo $tax->slug; ?>" size="40" />
     <p><?php _e('The &#8220;slug&#8221; is the <b>unique</b> URL-friendly version of the name. It is usually all lowercase and contains only letters, numbers, and hyphens.'); ?></p>
 </div>
 
 <div class="form-field">
-	<label for="slug"><?php _e('Taxonomy object') ?></label>
+	<label for="slug"><?php _e('Taxonomy object', CUSTAX_DOMAIN) ?></label>
 	<select name="object_type" id="object_type" style="width:100px">
 		<option value="post" <?php selected($tax->object_type, 'post'); ?>>Post</option>
 		<option value="page" <?php selected($tax->object_type, 'page'); ?>>Page</option>
 		<option value="link" <?php selected($tax->object_type, 'link'); ?>>Link</option>
 	</select>
-    <p><?php _e('The object is the type of data the taxonomy will apply to.'); 
+    <p><?php _e('The object is the type of data the taxonomy will apply to.', CUSTAX_DOMAIN); 
 ?></p>
 </div>
 
 <div class="form-field">
-	<label><?php _e('Miscellaneous options') ?></label>
+	<label><?php _e('Miscellaneous options', CUSTAX_DOMAIN) ?></label>
 
 	<p><input name="hierarchical" id="hierarchical" type="checkbox" value="1" style="width:20px;margin-top:0;" <?php checked($tax->hierarchical, true)?> />
-	<?php _e('Allow nested terms') ?></p>
+	<?php _e('Allow nested terms', CUSTAX_DOMAIN) ?></p>
 
 	<p><input name="multiple" id="multiple" type="checkbox" value="1" style="width:20px;margin-top:0;" <?php checked($tax->multiple, true)?> />
-	<?php _e('Allow multiple selections for each item'); ?>
-	<?php echo '<br /><strong>'.__('Note:').'</strong> '.__('This has not been implemented yet.'); ?></p>
+	<?php _e('Allow multiple selections for each item', CUSTAX_DOMAIN); ?>
+	<?php echo '<br /><strong>'.__('Note:').'</strong> '.__('This has not been implemented yet.', CUSTAX_DOMAIN); ?></p>
 
 	<p><input name="tag_style" id="tag_style" type="checkbox" value="1" style="width:20px;margin-top:0;" <?php checked($tax->tag_style, true)?> />
-	<?php _e('Use tag-style selection, encouraging arbitrary term creation (works best with multiple selections, but not required)') ?>
-	<?php echo '<br /><strong>'.__('Note:').'</strong> '.__('This has not been implemented yet.'); ?></p>
+	<?php _e('Use tag-style selection, encouraging arbitrary term creation (works best with multiple selections, but not required)', CUSTAX_DOMAIN) ?>
+	<?php echo '<br /><strong>'.__('Note:').'</strong> '.__('This has not been implemented yet.', CUSTAX_DOMAIN); ?></p>
 
 	<p><input name="descriptions" id="descriptions" type="checkbox" value="1" style="width:20px;margin-top:0;" <?php checked($tax->descriptions, true)?> />
-	<?php _e('Allow descriptions') ?></p>
+	<?php _e('Allow descriptions', CUSTAX_DOMAIN) ?></p>
 
 	<p><input name="show_column" id="show_column" type="checkbox" value="1" style="width:20px;margin-top:0;" <?php checked($tax->show_column, true)?> />
-	<?php _e('Show taxonomy on manage screen') ?></p>
+	<?php _e('Show taxonomy on object\'s manage screen', CUSTAX_DOMAIN) ?></p>
 </div>
 
 <p class="submit"><input type="submit" class="button" name="submit" value="<?php echo $submit; ?>" /></p>

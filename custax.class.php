@@ -258,7 +258,7 @@ class custax {
 		if ( is_term( trim( $_POST['name'] ), $this->slug ) ) {
 			$x = new WP_Ajax_Response( array(
 				'what' => $this->slug,
-				'id' => new WP_Error( 'exists', __('The term you are trying to create already exists.'), array( 'form-field' => 'name' ) ),
+				'id' => new WP_Error( 'exists', __('The term you are trying to create already exists.', CUSTAX_DOMAIN), array( 'form-field' => 'name' ) ),
 			) );
 			$x->send();
 			die();
@@ -293,7 +293,7 @@ class custax {
 			'id' => $term->term_id,
 			'position' => -1,
 			'data' => $this->_term_row( $term, $level, $term_full_name ),
-			'supplemental' => array('name' => $term_full_name, 'show-link' => $this->name.' <a href="'.$this->slug.'-'.$term->term_id.'">'.$term_full_name.'</a> '.__( 'added' ))
+			'supplemental' => array('name' => $term_full_name, 'show-link' => $this->name.' <a href="'.$this->slug.'-'.$term->term_id.'">'.$term_full_name.'</a> '.__( 'added', CUSTAX_DOMAIN ))
 		) );
 		$x->send();
 		die();
@@ -458,7 +458,7 @@ $out .= '<td ' . $attributes . '><strong><a class="row-title" href="' . $edit_li
 $actions = array();
 $actions['edit'] = '<a href="' . $edit_link . '">' . __('Edit') . '</a>';
 $actions['inline hide-if-no-js'] = '<a href="#" class="editinline">' . __('Quick&nbsp;Edit') . '</a>';
-$actions['delete'] = "<a class='submitdelete' href='" . wp_nonce_url("{$self}&amp;action=delete&amp;term_ID=$term->term_id", 'delete-term_' . $term->term_id) . "' onclick=\"if ( confirm('" . js_escape(sprintf(__("You are about to delete this term '%s'\n 'Cancel' to stop, 'OK' to delete."), $name )) . "') ) { return true;}return false;\">" . __('Delete') . "</a>";
+$actions['delete'] = "<a class='submitdelete' href='" . wp_nonce_url("{$self}&amp;action=delete&amp;term_ID=$term->term_id", 'delete-term_' . $term->term_id) . "' onclick=\"if ( confirm('" . js_escape(sprintf(__("You are about to delete this term '%s'\n 'Cancel' to stop, 'OK' to delete.", CUSTAX_DOMAIN), $name )) . "') ) { return true;}return false;\">" . __('Delete') . "</a>";
 $action_count = count($actions);
 $i = 0;
 $out .= '<div class="row-actions">';
@@ -621,7 +621,7 @@ foreach ( $actions as $action => $link ) {
 		$term = get_term($term_ID, $this->slug, OBJECT, 'edit');
 
 		if ( empty($term_ID) ) { ?>
-			<div id="message" class="updated fade"><p><strong><?php _e('Nothing was selected for editing.'); ?></strong></p></div>
+			<div id="message" class="updated fade"><p><strong><?php _e('Nothing was selected for editing.', CUSTAX_DOMAIN); ?></strong></p></div>
 			<?php
 			break;
 		}
@@ -640,7 +640,7 @@ foreach ( $actions as $action => $link ) {
 				<tr class="form-field form-required">
 					<th scope="row" valign="top"><label for="name"><?php _e('Name') ?></label></th>
 					<td><input name="name" id="name" type="text" value="<?php if ( isset( $term->name ) ) echo attribute_escape($term->name); ?>" size="40" aria-required="true" />
-		            <p><?php _e('The name is how the term appears on your site.'); ?></p></td>
+		            <p><?php _e('The name is how the term appears on your site.', CUSTAX_DOMAIN); ?></p></td>
 				</tr>
 				<tr class="form-field">
 					<th scope="row" valign="top"><label for="slug"><?php _e('Slug') ?></label></th>
@@ -653,7 +653,7 @@ foreach ( $actions as $action => $link ) {
 					<th scope="row" valign="top"><label for="parent"><?php _e('Parent') ?></label></th>
 					<td><?php 
 					custax_wp_dropdown_terms($this->slug, array('hide_empty' => 0, 'name' => 'parent', 'orderby' => 'name', 'selected' => $term->parent, 'hierarchical' => true, 'show_option_none' => __('None'))); ?>
-			    <p><?php _e('This taxonomy can have a hierarchy. You might have a Jazz term, and under that have children categories for Bebop and Big Band. Totally optional.'); ?></p></td>
+			    <p><?php _e('This taxonomy can have a hierarchy. You might have a Jazz term, and under that have children categories for Bebop and Big Band. Totally optional.', CUSTAX_DOMAIN); ?></p></td>
 				</tr>
 				<?php endif; ?>
 
@@ -666,7 +666,7 @@ foreach ( $actions as $action => $link ) {
 				<?php endif; ?>
 
 			</table>
-		<p class="submit"><input type="submit" class="button-primary" name="submit" value="<?php _e('Update Term'); ?>" /></p>
+		<p class="submit"><input type="submit" class="button-primary" name="submit" value="<?php _e('Update Term', CUSTAX_DOMAIN); ?>" /></p>
 		<?php do_action('edit_term_form', $this->slug, $term); ?>
 		</form>
 		</div>
@@ -693,12 +693,12 @@ foreach ( $actions as $action => $link ) {
 
 	$can_manage = current_user_can('manage_categories');
 
-	$messages[1] = __('Term added.');
-	$messages[2] = __('Term deleted.');
-	$messages[3] = __('Term updated.');
-	$messages[4] = __('Term not added.');
-	$messages[5] = __('Term not updated.');
-	$messages[6] = __('Terms deleted.'); ?>
+	$messages[1] = __('Term added.', CUSTAX_DOMAIN);
+	$messages[2] = __('Term deleted.', CUSTAX_DOMAIN);
+	$messages[3] = __('Term updated.', CUSTAX_DOMAIN);
+	$messages[4] = __('Term not added.', CUSTAX_DOMAIN);
+	$messages[5] = __('Term not updated.', CUSTAX_DOMAIN);
+	$messages[6] = __('Terms deleted.', CUSTAX_DOMAIN); ?>
 
 	<div class="wrap nosubsub">
 	<?php screen_icon(); ?>
@@ -812,7 +812,7 @@ foreach ( $actions as $action => $link ) {
 		do_action('add_term_form_pre', $this->slug); ?>
 
 	<div class="form-wrap">
-	<h3><?php echo __('Add a New').' '.$this->name; ?></h3>
+	<h3><?php echo __('Add a New', CUSTAX_DOMAIN).' '.$this->name; ?></h3>
 	<div id="ajax-response"></div>
 	<form name="addterm" id="addterm" method="post" action="<?php echo $self; ?>" class="add:the-list: validate">
 	<input type="hidden" name="action" value="addterm" />
@@ -821,7 +821,7 @@ foreach ( $actions as $action => $link ) {
 	<div class="form-field form-required">
 		<label for="name"><?php _e('Name'); ?></label>
 		<input name="name" id="name" type="text" value="" size="40" aria-required="true" />
-	    <p><?php echo __('The name is how the term appears on your site.'); ?></p>
+	    <p><?php echo __('The name is how the term appears on your site.', CUSTAX_DOMAIN); ?></p>
 	</div>
 
 	<div class="form-field">
@@ -835,7 +835,7 @@ foreach ( $actions as $action => $link ) {
         	<label for="parent"><?php _e('Parent') ?></label>
 	        <?php 
 		custax_wp_dropdown_terms($this->slug, array('hide_empty' => 0, 'name' => 'parent', 'orderby' => 'name', 'selected' => $term->parent, 'hierarchical' => true, 'show_option_none' => __('None'))); ?>
-	    <p><?php _e('This taxonomy can have a hierarchy. You might have a Jazz term, and under that have children categories for Bebop and Big Band. Totally optional.'); ?></p>
+	    <p><?php _e('This taxonomy can have a hierarchy. You might have a Jazz term, and under that have children categories for Bebop and Big Band. Totally optional.', CUSTAX_DOMAIN); ?></p>
 	</div>
 	<?php endif; ?>
 
@@ -862,7 +862,7 @@ foreach ( $actions as $action => $link ) {
 	/* <![CDATA[ */
 	(function($){
 		$(document).ready(function(){
-			var m = '<?php echo js_escape(__("You are about to delete the selected terms.\n  'Cancel' to stop, 'OK' to delete.")); ?>';
+			var m = '<?php echo js_escape(__("You are about to delete the selected terms.\n  'Cancel' to stop, 'OK' to delete.", CUSTAX_DOMAIN)); ?>';
 			$('#doaction').click(function(){
 				if ( $('select[name^="action"]').val() == 'delete' ) {
 					return showNotice.warn(m);

@@ -35,10 +35,13 @@ require_once($custax_dir . '/edit-taxonomies.php');
 require_once($custax_dir . '/taxonomy_functions.php');
 
 //make sure we can use $wpdb: only needed so the activate check doesn't fail
-global $wpdb, $custax_db_version;
+global $wpdb;
 
 //the version of the DB
-$custax_db_version = '1.0';
+define('CUSTAX_DB_VERSION', '1.0');
+
+//the translation domain
+define('CUSTAX_DOMAIN', 'custom_taxonomies');
 
 //the URL of our JS directory
 $custax_js_url = WP_PLUGIN_URL.'/'.basename($custax_dir).'/js';
@@ -192,13 +195,13 @@ function custax_inline_edit() {
         if ( $ret && !is_wp_error($ret) )
 		echo $custax_taxonomies[$type]->_term_row($ret['term_id'], max( (int) $_POST['level'], 0 ));
         else
-                die( __('Term not updated.') );
+                die( __('Term not updated.', CUSTAX_DOMAIN) );
 
         exit;
 }
 
 function custax_install() {
-	global $wpdb, $custax_db_version;
+	global $wpdb;
 
 	if($wpdb->get_var("show tables like '$wpdb->custom_taxonomies'") != $wpdb->custom_taxonomies) {
 		$sql = "CREATE TABLE `{$wpdb->custom_taxonomies}` (
@@ -219,7 +222,7 @@ function custax_install() {
 		require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
 		dbDelta($sql);
 
-		add_option("custax_db_version", $custax_db_version);
+		add_option('custax_db_version', CUSTAX_DB_VERSION);
 	}
 
 	//TODO: update DB check (not needed until we actually change our DB)

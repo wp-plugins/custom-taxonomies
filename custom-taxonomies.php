@@ -6,12 +6,14 @@ Description: Custom Taxonomies provides a full administrative interface for
 creating and using taxonomies beyond the standard Tags and Categories offered 
 in the default Wordpress installation.
 Author: Brian Krausz
-Version: 0.5
+Version: 1.0
 Author URI: http://nerdlife.net/
 */
 
 //make sure we can use $wpdb: only needed so the activate check doesn't fail
 global $wpdb;
+
+$custax_db_version = '1.0';
 
 $custax_dir = dirname(__FILE__);
 $custax_js_url = WP_PLUGIN_URL.'/'.basename($custax_dir).'/js';
@@ -32,6 +34,8 @@ if($taxes) {
 		$custax_taxonomies[$tax->slug] = new custax($tax);
 	}
 }
+
+register_activation_hook(__FILE__, 'custax_install');
 
 wp_register_script( 'admin-terms', $custax_js_url.'/terms.js', array('wp-lists'), '20081223' );
 
@@ -172,4 +176,29 @@ function custax_inline_edit() {
         exit;
 }
 
+function custax_install() {
+	global $wpdb, $custax_db_version;
+
+	if($wpdb->get_var("show tables like '$wpdb->custom_taxonomies'") != $wpdb->custom_taxonomies) {
+		$sql = "CREATE TABLE `{$wpdb->custom_taxonomies}` (
+			`id` int(8) unsigned NOT NULL auto_increment,
+			`slug` varchar(32) NOT NULL,
+			`name` varchar(32) NOT NULL,
+			`plural` varchar(32) NOT NULL,
+			`object_type` varchar(32) NOT NULL,
+			`hierarchical` tinyint(1) unsigned NOT NULL,
+			`multiple` tinyint(1) unsigned NOT NULL,
+			`tag_style` tinyint(1) unsigned NOT NULL,
+			`descriptions` tinyint(1) unsigned NOT NULL,
+			`show_column` tinyint(1) unsigned NOT NULL,
+			PRIMARY KEY  (`id`),
+			UNIQUE KEY `slug` (`slug`)
+		);";
+
+		require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+		dbDelta($sql);
+
+		add_option("custax_db_version", $custax_db_version);
+	}
+}
 ?>

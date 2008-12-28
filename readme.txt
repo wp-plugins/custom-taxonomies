@@ -50,6 +50,7 @@ Note that neither of these will provide links to a list of all objects with a pa
 
 If you'd like to use these taxonomies in a more advanced way, please see the following documentation (note that most of it has yet to be written, I 
 will be contributing heavily to this shortly):
+
 *  [get\_term](http://codex.wordpress.org/Function_Reference/get_term)
 *  [get\_term\_by](http://codex.wordpress.org/Function_Reference/get_term_by)
 *  [get\_term\_children](http://codex.wordpress.org/Function_Reference/get_term_children)

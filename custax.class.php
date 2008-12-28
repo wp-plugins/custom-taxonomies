@@ -55,6 +55,8 @@ class custax {
 		add_action('admin_menu', array(&$this, 'register_column'), 5);
 		add_action('admin_menu', array(&$this, 'admin_menu'));
 
+		add_action('widgets_init', array(&$this, 'register_widget'));
+
 		switch($this->object_type) {
 		case 'link':
 			$this->manage_page = 'link-manager.php';
@@ -89,6 +91,164 @@ class custax {
 		add_action( 'admin_print_scripts-' . $edit_object_hook_end, array(&$this, 'select_enqueue_scripts') );
 		add_action( 'admin_head-' . $add_object_hook_end,  array(&$this, 'select_scripts'), 20 );
 		add_action( 'admin_head-' . $edit_object_hook_end, array(&$this, 'select_scripts'), 20 );
+	}
+
+	function register_widget() {
+		if ( !$options = get_option( 'widget_terms_'.$this->slug ) )
+			$options = array();
+
+		$widget_ops = array('classname' => 'widget_terms_'.$this->slug, 'description' => sprintf(__( 'A list or dropdown of %s', CUSTAX_DOMAIN), $this->plural));
+		$id = false;
+		foreach ( (array) array_keys($options) as $o ) {
+			$id = "terms-$this->slug-$o";
+
+			wp_register_sidebar_widget($id, $this->plural, array(&$this, 'widget'), $widget_ops, array('number' => $o));
+			wp_register_widget_control($id, $this->plural, array(&$this, 'widget_control'), array( 'id_base' => 'terms-'.$this->slug ), array( 'number' => $o ) );
+		}
+
+		// If there are none, we register the widget's existance with a generic template
+		if ( !$id ) {
+			$id = "terms-$this->slug-1";
+
+			wp_register_sidebar_widget($id, $this->plural, array(&$this, 'widget'), $widget_ops, array('number' => -1));
+			wp_register_widget_control($id, $this->plural, array(&$this, 'widget_control'), array( 'id_base' => 'terms-'.$this->slug ), array( 'number' => -1 ) );
+		}
+	}
+
+	function widget($args, $widget_args = 1) {
+		extract($args, EXTR_SKIP);
+		if ( is_numeric($widget_args) )
+			$widget_args = array( 'number' => $widget_args );
+		$widget_args = wp_parse_args( $widget_args, array( 'number' => -1 ) );
+		extract($widget_args, EXTR_SKIP);
+
+		$options = get_option('widget_terms_'.$this->slug);
+		if ( !isset($options[$number]) )
+			return;
+
+		$c = $options[$number]['count'] ? '1' : '0';
+		$h = ( $options[$number]['hierarchical'] && $this->hierarchical ) ? '1' : '0';
+		$d = $options[$number]['dropdown'] ? '1' : '0';
+
+		$title = empty($options[$number]['title']) ? $this->plural : apply_filters('widget_title', $options[$number]['title']);
+
+		echo $before_widget;
+		echo $before_title . $title . $after_title;
+
+		$term_args = array('orderby' => 'name', 'show_count' => $c, 'hierarchical' => $h);
+
+		if ( $d ) {
+			$term_args['show_option_none'] = __('Select ').$this->plural;
+			custax_wp_dropdown_terms($this->slug, $term_args);
+			?>
+			<script type='text/javascript'>
+			/* <![CDATA[ */
+			var dropdown = document.getElementById("cat");
+			function onCatChange() {
+				if ( dropdown.options[dropdown.selectedIndex].value > 0 ) {
+					location.href = "<?php echo get_option('home'); ?>/?cat="+dropdown.options[dropdown.selectedIndex].value;
+				}
+			}
+			dropdown.onchange = onCatChange;
+			/* ]]> */
+			</script>
+			<?php
+		} else {
+			echo '<ul>';
+			$term_args['title_li'] = '';
+			custax_list_terms($this->slug, $term_args);
+			echo '</ul>';
+		}
+		echo $after_widget;
+	}
+
+	function widget_control($widget_args) {
+		global $wp_registered_widgets;
+		static $updated = false;
+
+		if ( is_numeric($widget_args) )
+			$widget_args = array( 'number' => $widget_args );
+		$widget_args = wp_parse_args( $widget_args, array( 'number' => -1 ) );
+		extract($widget_args, EXTR_SKIP);
+
+		$options = get_option('widget_terms_'.$this->slug);
+
+		if ( !is_array( $options ) )
+			$options = array();
+
+		if ( !$updated && !empty($_POST['sidebar']) ) {
+			$sidebar = (string) $_POST['sidebar'];
+
+			$sidebars_widgets = wp_get_sidebars_widgets();
+			if ( isset($sidebars_widgets[$sidebar]) )
+				$this_sidebar =& $sidebars_widgets[$sidebar];
+			else
+				$this_sidebar = array();
+
+			foreach ( (array) $this_sidebar as $_widget_id ) {
+				if ( is_array($wp_registered_widgets[$_widget_id]['callback']) &&
+					isset($wp_registered_widgets[$_widget_id]['params'][0]['number']) ) {
+					$widget_number = $wp_registered_widgets[$_widget_id]['params'][0]['number'];
+					if ( !in_array( "terms-$this->slug-$widget_number", $_POST['widget-id'] ) ) // the widget has been removed.
+						unset($options[$widget_number]);
+				}
+			}
+
+			foreach ( (array) $_POST['widget-terms-'.$this->slug] as $widget_number => $widget_term ) {
+				if ( !isset($widget_term['title']) && isset($options[$widget_number]) ) // user clicked cancel
+					continue;
+				$title = trim(strip_tags(stripslashes($widget_term['title'])));
+				$count = isset($widget_term['count']);
+				$hierarchical = isset($widget_term['hierarchical']);
+				$dropdown = isset($widget_term['dropdown']);
+				$options[$widget_number] = compact( 'title', 'count', 'hierarchical', 'dropdown' );
+			}
+
+			update_option('widget_terms_'.$this->slug, $options);
+			$updated = true;
+		}
+
+		if ( -1 == $number ) {
+			$title = '';
+			$count = false;
+			$hierarchical = false;
+			$dropdown = false;
+			$number = '%i%';
+		} else {
+			$title = attribute_escape( $options[$number]['title'] );
+			$count = (bool) $options[$number]['count'];
+			$hierarchical = (bool) $options[$number]['hierarchical'];
+			$dropdown = (bool) $options[$number]['dropdown'];
+		}
+		?>
+			<p>
+			<label for="terms-<?php echo $this->slug; ?>-title-<?php echo $number; ?>">
+			<?php _e( 'Title:' ); ?>
+			<input class="widefat" id="terms-<?php echo $this->slug; ?>-title-<?php echo $number; ?>" name="widget-terms-<?php echo $this->slug; ?>[<?php echo $number; ?>][title]" type="text" value="<?php echo $title; ?>" />
+			</label>
+			</p>
+
+			<p>
+			<label for="terms-<?php echo $this->slug; ?>-dropdown-<?php echo $number; ?>">
+			<input type="checkbox" class="checkbox" id="terms-<?php echo $this->slug; ?>-dropdown-<?php echo $number; ?>" name="widget-terms-<?php echo $this->slug; ?>[<?php echo $number; ?>][dropdown]"<?php checked( $dropdown, true ); ?> />
+			<?php _e( 'Show as dropdown' ); ?>
+			</label>
+			<br />
+			<label for="terms-<?php echo $this->slug; ?>-count-<?php echo $number; ?>">
+			<input type="checkbox" class="checkbox" id="terms-<?php echo $this->slug; ?>-count-<?php echo $number; ?>" name="widget-terms-<?php echo $this->slug; ?>[<?php echo $number; ?>][count]"<?php checked( $count, true ); ?> />
+			<?php _e( 'Show '.$this->object_type.' counts' ); ?>
+			</label>
+		<?php if($this->hierarchical) : ?>
+			<br />
+			<label for="terms-<?php echo $this->slug; ?>-hierarchical-<?php echo $number; ?>">
+			<input type="checkbox" class="checkbox" id="terms-<?php echo $this->slug; ?>-hierarchical-<?php echo $number; ?>" name="widget-terms-<?php echo $this->slug; ?>[<?php echo $number; ?>][hierarchical]"<?php checked( $hierarchical, true ); ?> />
+			<?php _e( 'Show hierarchy' ); ?>
+			</label>
+		<?php endif; ?>
+			</p>
+
+			<input type="hidden" name="widget-terms-<?php echo $this->slug; ?>[<?php echo $number; ?>][submit]" value="1" />
+		<?php
 	}
 
 	function save($id) {

@@ -48,8 +48,8 @@ class Walker_TermDropdown extends Walker {
          * @since 2.1.0
          *
          * @param string $output Passed by reference. Used to append additional content.
-         * @param object $category Category data object.
-         * @param int $depth Depth of category. Used for padding.
+         * @param object $term term data object.
+         * @param int $depth Depth of term. Used for padding.
          * @param array $args Uses 'selected', 'show_count', and 'show_last_update' keys, if they exist.
          */
         function start_el(&$output, $term, $depth, $args) {
@@ -102,6 +102,165 @@ class Walker_Term_Checklist extends Walker {
                 $output .= "</li>\n";
         }
 }
+}
+
+if(!class_exists('Walker_Term')) {
+class Walker_Term extends Walker {
+        /**
+         * @see Walker::$tree_type
+         * @since 2.1.0
+         * @var string
+         */
+        var $tree_type;
+
+        /**
+         * @see Walker::$db_fields
+         * @since 2.1.0
+         * @todo Decouple this
+         * @var array
+         */
+        var $db_fields = array ('parent' => 'parent', 'id' => 'term_id');
+
+	function Walker_Term($taxonomy) {
+		$this->tree_type = $taxonomy;
+	}
+
+        /**
+         * @see Walker::start_lvl()
+         * @since 2.1.0
+         *
+         * @param string $output Passed by reference. Used to append additional content.
+         * @param int $depth Depth of term. Used for tab indentation.
+         * @param array $args Will only append content if style argument value is 'list'.
+         */
+        function start_lvl(&$output, $depth, $args) {
+                if ( 'list' != $args['style'] )
+                        return;
+
+                $indent = str_repeat("\t", $depth);
+                $output .= "$indent<ul class='children'>\n";
+        }
+
+        /**
+         * @see Walker::end_lvl()
+         * @since 2.1.0
+         *
+         * @param string $output Passed by reference. Used to append additional content.
+         * @param int $depth Depth of term. Used for tab indentation.
+         * @param array $args Will only append content if style argument value is 'list'.
+         */
+        function end_lvl(&$output, $depth, $args) {
+                if ( 'list' != $args['style'] )
+                        return;
+
+                $indent = str_repeat("\t", $depth);
+                $output .= "$indent</ul>\n";
+        }
+
+        /**
+         * @see Walker::start_el()
+         * @since 2.1.0
+         *
+         * @param string $output Passed by reference. Used to append additional content.
+         * @param object $term term data object.
+         * @param int $depth Depth of term in reference to parents.
+         * @param array $args
+         */
+        function start_el(&$output, $term, $depth, $args) {
+                extract($args);
+
+                $term_name = attribute_escape( $term->name);
+                $term_name = apply_filters( 'list_terms', $term_name, $term );
+
+		/** TODO: links do not work, see http://trac.wordpress.org/ticket/8731
+                $link = '<a href="' . get_term_link( $term->term_id, $this->tree_type ) . '" ';
+                if ( $use_desc_for_title == 0 || empty($term->description) )
+                        $link .= 'title="' . sprintf(__( 'View all posts filed under %s' ), $term_name) . '"';
+                else
+                        $link .= 'title="' . attribute_escape( apply_filters( 'term_description', $term->description, $term )) . '"';
+                $link .= '>';
+		**/
+                $link .= $term_name;
+                //$link .= '</a>';	TODO
+
+                if ( (! empty($feed_image)) || (! empty($feed)) ) {
+                        $link .= ' ';
+
+                        if ( empty($feed_image) )
+                                $link .= '(';
+
+			/** TODO: links do not work, see http://trac.wordpress.org/ticket/8731
+                        $link .= '<a href="' . get_term_feed_link($term->term_id, $this->tree_type, $feed_type) . '"';
+
+                        if ( empty($feed) )
+                                $alt = ' alt="' . sprintf(__( 'Feed for all posts filed under %s' ), $term_name ) . '"';
+                        else {
+                                $title = ' title="' . $feed . '"';
+                                $alt = ' alt="' . $feed . '"';
+                                $name = $feed;
+                                $link .= $title;
+                        }
+
+                        $link .= '>';
+			**/
+
+                        if ( empty($feed_image) )
+                                $link .= $name;
+                        else
+                                $link .= "<img src='$feed_image'$alt$title" . ' />';
+
+                        //$link .= '</a>';	TODO
+
+                        if ( empty($feed_image) )
+                                $link .= ')';
+                }
+
+                if ( isset($show_count) && $show_count )
+                        $link .= ' (' . intval($term->count) . ')';
+
+                if ( isset($show_date) && $show_date ) {
+                        $link .= ' ' . gmdate('Y-m-d', $term->last_update_timestamp);
+                }
+
+                if ( isset($current_term) && $current_term )
+                        $_current_term = get_term( $current_term, $this->tree_type );
+
+                if ( 'list' == $args['style'] ) {
+                        $output .= "\t<li";
+                        $class = $this->tree_type.'-item '.$this->tree_type.'-item-'.$term->term_id;
+                        if ( isset($current_term) && $current_term && ($term->term_id == $current_term) )
+                                $class .=  ' current-'.$this->tree_type;
+                        elseif ( isset($_current_term) && $_current_term && ($term->term_id == $_current_term->parent) )
+                                $class .=  ' current-'.$this->tree_type.'-parent';
+                        $output .=  ' class="'.$class.'"';
+                        $output .= ">$link\n";
+                } else {
+                        $output .= "\t$link<br />\n";
+                }
+        }
+
+        /**
+         * @see Walker::end_el()
+         * @since 2.1.0
+         *
+         * @param string $output Passed by reference. Used to append additional content.
+         * @param object $page Not used.
+         * @param int $depth Depth of term. Not used.
+         * @param array $args Only uses 'list' for whether should append to output.
+         */
+        function end_el(&$output, $page, $depth, $args) {
+                if ( 'list' != $args['style'] )
+                        return;
+
+                $output .= "</li>\n";
+        }
+}
+}
+
+function custax_walk_term_tree() {
+        $args = func_get_args();
+        $walker = new Walker_Term(array_shift($args));
+        return call_user_func_array(array( &$walker, 'walk' ), $args );
 }
 
 /* Does exist but is tied to categories despite function name */

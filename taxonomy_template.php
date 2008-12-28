@@ -48,5 +48,74 @@ function custax_the_terms( $taxonomy, $before = '', $sep = '', $after = '' ) {
 	echo $before . join( $sep, $term_links ) . $after;
 }
 
+function custax_list_terms( $taxonomy, $args = '' ) {
+        $defaults = array(
+                'show_option_all' => '', 'orderby' => 'name',
+                'order' => 'ASC', 'show_last_update' => 0,
+                'style' => 'list', 'show_count' => 0,
+                'hide_empty' => 1, 'use_desc_for_title' => 1,
+                'child_of' => 0, 'feed' => '', 'feed_type' => '',
+                'feed_image' => '', 'exclude' => '', 'current_category' => 0,
+                'hierarchical' => true, 'title_li' => '',
+                'echo' => 1, 'depth' => 0
+        );
+
+        $r = wp_parse_args( $args, $defaults );
+
+        if ( !isset( $r['pad_counts'] ) && $r['show_count'] && $r['hierarchical'] ) {
+                $r['pad_counts'] = true;
+        }
+
+        if ( isset( $r['show_date'] ) ) {
+                $r['include_last_update_time'] = $r['show_date'];
+        }
+
+	if ( $r['hierarchcial'] && !is_taxonomy_hierarchical($taxonomy) ) {
+		$r['hierarchical'] = false;
+	}
+
+        extract( $r );
+
+        $terms = get_terms( $taxonomy, $r );
+        $output = '';
+        if ( $title_li && 'list' == $style )
+                        $output = '<li class="terms">' . $r['title_li'] . '<ul>';
+
+        if ( empty( $terms ) ) {
+                if ( 'list' == $style )
+                        $output .= '<li>' . __( "No terms" ) . '</li>';
+                else
+                        $output .= __( "No terms" );
+        } else {
+                global $wp_query;
+
+                if( !empty( $show_option_all ) )
+                        if ( 'list' == $style )
+                                $output .= '<li><a href="' .  get_bloginfo( 'url' )  . '">' . $show_option_all . '</a></li>';
+                        else
+                                $output .= '<a href="' .  get_bloginfo( 'url' )  . '">' . $show_option_all . '</a>';
+
+                if ( empty( $r['current_term'] ) && is_tax() )
+                        $r['current_term'] = $wp_query->get_queried_object_id();
+                if ( $hierarchical )
+                        $depth = $r['depth'];
+                else
+                        $depth = -1; // Flat.
+
+                $output .= custax_walk_term_tree( $taxonomy, $terms, $depth, $r );
+        }
+
+        if ( $title_li && 'list' == $style )
+                $output .= '</ul></li>';
+
+        $output = apply_filters( 'wp_list_terms', $output );
+
+        if ( $echo )
+                echo $output;
+        else
+                return $output;
+}
+
+
 
 ?>

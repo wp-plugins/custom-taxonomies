@@ -22,29 +22,40 @@ the taxonomies themselves.  This plugin allows you to:
 *   Manage each taxonomy's terms in a full AJAX-interface
 *   Assign terms to posts, pages, and links just as you would with 
     categories and tags
+*   __NEW:__ Add widgets for your taxonomies into your site
 
 == Installation ==
 
 1. Upload `custom-taxonomies` to the `/wp-content/plugins/` directory
 1. Activate the plugin through the 'Plugins' menu in WordPress
 1. Use the `Taxonomies` page in `Settings` to create and manage taxonomies
-1. Use the following functions to use taxonomies in your themes:
+1. After creating a taxonomy, go to the `Widgets` page in `Appearance` to add a list of terms into your site's sidebar
+1. Use the examples below to use taxonomies in your themes:
+
+= Example Use =
+
+Here are some examples of how you can implement the taxonomies in your themes:
+
+* Display a comma-seperated list of a post or page's taxonomy 'thing' in the format "Things: Thing 1, Thing 2":
+
+`<?php if(function_exists('custax_the_terms')) custax_the_terms('thing', 'Things: ', ', ', '<br />'); ?>`
+
+* Display a list of all terms for the taxonomy 'thing':
+
+`<?php if(function_exists('custax_list_terms')) custax_list_terms('thing'); ?>`
+
+Note that neither of these will provide links to a list of all objects with a particular term.  This will be fixed once a workaround is found for [this bug](http://trac.wordpress.org/ticket/8731).
+
+= Advanced Use =
+
+If you'd like to use these taxonomies in a more advanced way, please see the following documentation (note that most of it has yet to be written, I 
+will be contributing heavily to this shortly):
 *  [get_term](http://codex.wordpress.org/Function_Reference/get_term)
 *  [get_term_by](http://codex.wordpress.org/Function_Reference/get_term_by)
 *  [get_term_children](http://codex.wordpress.org/Function_Reference/get_term_children)
 *  [get_terms](http://codex.wordpress.org/Function_Reference/get_terms)
 *  [is_term](http://codex.wordpress.org/Function_Reference/is_term)
 *  [wp_get_object_terms](http://codex.wordpress.org/Function_Reference/wp_get_object_terms)
-
-= Example Use =
-
-Here are some examples of how you can implement the taxonomies in your themes:
-
-* Display a comma-seperated list of taxonomy 'thing' in the format "Things: Thing 1, Thing 2":
-
-`<?php if(function_exists('custax_the_terms')) custax_the_terms('thing', 'Things: ', ', ', '<br />'); ?>`
-
-* More examples coming soon, especially once a workaround is found for [this bug](http://trac.wordpress.org/ticket/8731).
 
 = Known Issues =
 

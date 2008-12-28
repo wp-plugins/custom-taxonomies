@@ -36,11 +36,9 @@ the taxonomies themselves.  This plugin allows you to:
 
 Here are some examples of how you can implement the taxonomies in your themes:
 
-* Display a comma-seperated list of a post or page's taxonomy 'thing' in the format "Things: Thing 1, Thing 2":
-`\<?php if\(function\_exists\('custax\_the\_terms'\)\) custax\_the\_terms\('thing', 'Things: ', ', ', '\<br /\>'\); ?\>`
+* To display a comma-seperated list of a post or page's taxonomy 'thing' in the format "Things: Thing 1, Thing 2" use `<?php if(function_exists('custax_the_terms')) custax_the_terms('thing', 'Things: ', ', ', '<br />'); ?>`
 
-* Display a list of all terms for the taxonomy 'thing':
-`\<?php if\(function\_exists\('custax\_list\_terms'\)\) custax_list_terms\('thing'\); ?\>`
+* To display a list of all terms for the taxonomy 'thing' use `<?php if(function_exists('custax_list_terms')) custax_list_terms('thing'); ?>`
 
 Note that neither of these will provide links to a list of all objects with a particular term.  This will be fixed once a workaround is found for [this bug](http://trac.wordpress.org/ticket/8731).
 

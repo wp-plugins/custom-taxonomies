@@ -342,7 +342,7 @@ function custax_edit() {
 
 	<p><input name="multiple" id="multiple" type="checkbox" value="1" style="width:20px;margin-top:0;" <?php checked($tax->multiple, true)?> />
 	<?php _e('Allow multiple selections for each item', CUSTAX_DOMAIN); ?>
-	<?php echo '<br /><strong>'.__('Note:').'</strong> '.__('This has not been implemented yet.', CUSTAX_DOMAIN); ?></p>
+	<?php echo '<br /><strong>'.__('Note:').'</strong> '.__('This has not been implemented yet, it will assume yes.', CUSTAX_DOMAIN); ?></p>
 
 	<p><input name="tag_style" id="tag_style" type="checkbox" value="1" style="width:20px;margin-top:0;" <?php checked($tax->tag_style, true)?> />
 	<?php _e('Use tag-style selection, encouraging arbitrary term creation (works best with multiple selections, but not required)', CUSTAX_DOMAIN) ?>

@@ -6,7 +6,7 @@ Description: Custom Taxonomies provides a full administrative interface for
 creating and using taxonomies beyond the standard Tags and Categories offered 
 in the default WordPress installation.
 Author: Brian Krausz
-Version: 1.0
+Version: 1.1
 Author URI: http://nerdlife.net/
 */
 

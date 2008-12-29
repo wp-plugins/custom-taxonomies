@@ -59,10 +59,10 @@ $custax_style_pages = array(
 //build the list of custax objects
 $custax_taxonomies = array();
 $wpdb->custom_taxonomies = $wpdb->prefix . 'custom_taxonomies';
-$taxes = $wpdb->get_results('SELECT * FROM '.$wpdb->custom_taxonomies);
-if($taxes) {
-	foreach($taxes AS $tax) {
-		$custax_taxonomies[$tax->slug] = new custax($tax);
+$custax_taxes = $wpdb->get_results('SELECT * FROM '.$wpdb->custom_taxonomies);
+if($custax_taxes) {
+	foreach($custax_taxes AS $custax_tax) {
+		$custax_taxonomies[$custax_tax->slug] = new custax($custax_tax);
 	}
 }
 
@@ -83,8 +83,8 @@ add_filter('posts_results', 'custax_posts_results');
 //TODO: hack, either because of a glitch in WP_Query or my lack of understanding of it
 add_filter('mod_rewrite_rules', 'custax_mod_rewrite_rules');
 
-foreach($custax_style_pages AS $page)
-	add_action('admin_head-'.$page, 'custax_styles');
+foreach($custax_style_pages AS $custax_page)
+	add_action('admin_head-'.$custax_page, 'custax_styles');
 
 function custax_menu() {
 	add_options_page('Taxonomies', 'Taxonomies', 9, 'custax_edit', 'custax_edit');
@@ -326,4 +326,5 @@ function custax_mod_rewrite_rules($rules) {
 
 	return implode("\n", $new_rules_array);
 }
+
 ?>

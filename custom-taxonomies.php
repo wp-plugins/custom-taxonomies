@@ -59,10 +59,10 @@ $custax_style_pages = array(
 //build the list of custax objects
 $custax_taxonomies = array();
 $wpdb->custom_taxonomies = $wpdb->prefix . 'custom_taxonomies';
-$taxes = $wpdb->get_results('SELECT * FROM '.$wpdb->custom_taxonomies);
-if($taxes) {
-	foreach($taxes AS $tax) {
-		$custax_taxonomies[$tax->slug] = new custax($tax);
+$custax_taxes = $wpdb->get_results('SELECT * FROM '.$wpdb->custom_taxonomies);
+if($custax_taxes) {
+	foreach($custax_taxes AS $custax_tax) {
+		$custax_taxonomies[$custax_tax->slug] = new custax($custax_tax);
 	}
 }
 

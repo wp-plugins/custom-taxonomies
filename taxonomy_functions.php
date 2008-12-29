@@ -58,7 +58,7 @@ class Walker_TermDropdown extends Walker {
                 $term_name = apply_filters('list_terms', $term->name, $term);
 		$value = $args['slug_value'] ? $term->slug : $term->term_id;
                 $output .= "\t<option class=\"level-$depth\" value=\"".$value."\"";
-                if ( $value == $args['selected'] )
+                if ( $value === $args['selected'] )
                         $output .= ' selected="selected"';
                 $output .= '>';
                 $output .= $pad.$term_name;

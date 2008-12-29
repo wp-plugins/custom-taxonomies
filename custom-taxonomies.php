@@ -83,8 +83,8 @@ add_filter('posts_results', 'custax_posts_results');
 //TODO: hack, either because of a glitch in WP_Query or my lack of understanding of it
 add_filter('mod_rewrite_rules', 'custax_mod_rewrite_rules');
 
-foreach($custax_style_pages AS $page)
-	add_action('admin_head-'.$page, 'custax_styles');
+foreach($custax_style_pages AS $custax_page)
+	add_action('admin_head-'.$custax_page, 'custax_styles');
 
 function custax_menu() {
 	add_options_page('Taxonomies', 'Taxonomies', 9, 'custax_edit', 'custax_edit');
@@ -326,4 +326,5 @@ function custax_mod_rewrite_rules($rules) {
 
 	return implode("\n", $new_rules_array);
 }
+
 ?>

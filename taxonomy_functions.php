@@ -55,12 +55,13 @@ class Walker_TermDropdown extends Walker {
         function start_el(&$output, $term, $depth, $args) {
                 $pad = str_repeat('&nbsp;', $depth * 3);
 
-                $cat_name = apply_filters('list_cats', $term->name, $term);
-                $output .= "\t<option class=\"level-$depth\" value=\"".$term->term_id."\"";
-                if ( $term->term_id == $args['selected'] )
+                $term_name = apply_filters('list_terms', $term->name, $term);
+		$value = $args['slug_value'] ? $term->slug : $term->term_id;
+                $output .= "\t<option class=\"level-$depth\" value=\"".$value."\"";
+                if ( $value == $args['selected'] )
                         $output .= ' selected="selected"';
                 $output .= '>';
-                $output .= $pad.$cat_name;
+                $output .= $pad.$term_name;
                 if ( $args['show_count'] )
                         $output .= '&nbsp;&nbsp;('. $term->count .')';
                 if ( $args['show_last_update'] ) {
@@ -74,8 +75,20 @@ class Walker_TermDropdown extends Walker {
 
 if(!class_exists('Walker_Term_Checklist')) {
 class Walker_Term_Checklist extends Walker {
+        /**
+         * @see Walker::$tree_type
+         * @since 2.1.0
+         * @var string
+         */
         var $tree_type;
-        var $db_fields = array ('parent' => 'parent', 'id' => 'term_id'); //TODO: decouple this
+
+        /**
+         * @see Walker::$db_fields
+         * @since 2.1.0
+         * @todo Decouple this
+         * @var array
+         */
+        var $db_fields = array ('parent' => 'parent', 'id' => 'term_id');
 
 	function Walker_Term_Checklist($taxonomy) {
 		$this->tree_type = $taxonomy;
@@ -172,16 +185,13 @@ class Walker_Term extends Walker {
                 $term_name = attribute_escape( $term->name);
                 $term_name = apply_filters( 'list_terms', $term_name, $term );
 
-		/** TODO: links do not work, see http://trac.wordpress.org/ticket/8731
-                $link = '<a href="' . get_term_link( $term->term_id, $this->tree_type ) . '" ';
+                $link = '<a href="' . get_term_link( $term, $this->tree_type ) . '" ';
                 if ( $use_desc_for_title == 0 || empty($term->description) )
                         $link .= 'title="' . sprintf(__( 'View all posts filed under %s' ), $term_name) . '"';
                 else
                         $link .= 'title="' . attribute_escape( apply_filters( 'term_description', $term->description, $term )) . '"';
                 $link .= '>';
-		**/
-                $link .= $term_name;
-                //$link .= '</a>';	TODO
+                $link .= $term_name . '</a>';
 
                 if ( (! empty($feed_image)) || (! empty($feed)) ) {
                         $link .= ' ';
@@ -189,7 +199,6 @@ class Walker_Term extends Walker {
                         if ( empty($feed_image) )
                                 $link .= '(';
 
-			/** TODO: links do not work, see http://trac.wordpress.org/ticket/8731
                         $link .= '<a href="' . get_term_feed_link($term->term_id, $this->tree_type, $feed_type) . '"';
 
                         if ( empty($feed) )
@@ -202,14 +211,13 @@ class Walker_Term extends Walker {
                         }
 
                         $link .= '>';
-			**/
 
                         if ( empty($feed_image) )
                                 $link .= $name;
                         else
                                 $link .= "<img src='$feed_image'$alt$title" . ' />';
 
-                        //$link .= '</a>';	TODO
+                        $link .= '</a>';
 
                         if ( empty($feed_image) )
                                 $link .= ')';
@@ -301,10 +309,11 @@ function custax_wp_dropdown_terms( $taxonomy, $args = '' ) {
                 'exclude' => '', 'echo' => 1,
                 'selected' => 0, 'hierarchical' => 0,
                 'name' => $taxonomy, 'class' => 'postform',
-                'depth' => 0, 'tab_index' => 0
+                'depth' => 0, 'tab_index' => 0, 'slug_value' => 0
         );
 
-        $defaults['selected'] = get_query_var( $taxonomy );
+	if(get_query_var( 'taxonomy' ) == $taxonomy)
+	        $defaults['selected'] = get_query_var( 'term' );
 
         $r = wp_parse_args( $args, $defaults );
         $r['include_last_update_time'] = $r['show_last_update'];
@@ -334,7 +343,6 @@ function custax_wp_dropdown_terms( $taxonomy, $args = '' ) {
                         $depth = $r['depth'];  // Walk the full depth.
                 else
                         $depth = -1; // Flat.
-
                 $output .= custax_walk_term_dropdown_tree( $taxonomy, $terms, $depth, $r );
         }
         $output .= "</select>\n";

@@ -28,6 +28,7 @@ class custax {
 	var $multiple;
 	var $descriptions;
 	var $show_column;
+	var $rewrite_rules;
 
 	function custax($tax) {
 		$this->id = $tax->id;
@@ -39,11 +40,35 @@ class custax {
 		$this->multiple = $tax->multiple;
 		$this->descriptions = $tax->descriptions;
 		$this->show_column = $tax->show_column;
+		$this->rewrite_rules = $tax->rewrite_rules;
 
 		$args = array(
+			//TODO: this will add the slug as a query var...this may not work if the slug is already a query var.  Add checks for this...
 			'query_var' => $this->slug,
 			'hierarchical' => $this->hierarchical,
 		);
+
+		switch($this->object_type) {
+		case 'link':
+			$this->manage_page = 'link-manager.php';
+			$manage_col_hook = 'manage_link_custom_column';
+			$manage_col_filter = 'manage_link-manager_columns';
+		break;
+		case 'page':
+			$this->manage_page = 'edit-pages.php';
+			$args['update_count_callback'] = 'custax_update_term_count';
+			$manage_col_hook = 'manage_pages_custom_column';
+			$manage_col_filter = 'manage_edit-pages_columns';
+		break;
+		default:
+			$this->object_type = 'post';
+			$this->manage_page = 'edit.php';
+			$args['update_count_callback'] = 'custax_update_term_count';
+			$manage_col_hook = 'manage_posts_custom_column';
+			$manage_col_filter = 'manage_edit_columns';
+		break;
+		}
+
 		register_taxonomy($this->slug, $this->object_type, $args);
 
 		add_action('wp_ajax_inline-save-custax', array(&$this, 'register_column'), 5);
@@ -57,17 +82,9 @@ class custax {
 
 		add_action('widgets_init', array(&$this, 'register_widget'));
 
-		switch($this->object_type) {
-		case 'link':
-			$this->manage_page = 'link-manager.php';
-		break;
-		case 'page':
-			$this->manage_page = 'edit-pages.php';
-		break;
-		default:
-			$this->object_type = 'post';
-			$this->manage_page = 'edit.php';
-		break;
+		if($this->show_column) {
+			add_action($manage_col_hook, array(&$this, 'manage_column'), 10, 2);
+			add_filter($manage_col_filter, array(&$this, 'manage_column_name'));
 		}
 
 		if($this->object_type == 'link') {
@@ -91,6 +108,18 @@ class custax {
 		add_action( 'admin_print_scripts-' . $edit_object_hook_end, array(&$this, 'select_enqueue_scripts') );
 		add_action( 'admin_head-' . $add_object_hook_end,  array(&$this, 'select_scripts'), 20 );
 		add_action( 'admin_head-' . $edit_object_hook_end, array(&$this, 'select_scripts'), 20 );
+
+		add_action( 'init', array(&$this, 'rewrite_rules') );
+	}
+
+	function rewrite_rules() {
+		global $wp_rewrite;
+		//TODO: not sure what the side effects of all of this is...have to be careful
+		add_rewrite_tag('%'.$this->slug.'%', '(.+)');
+		if($this->rewrite_rules) {
+			$wp_rewrite->add_permastruct($this->slug, $this->slug.'/%'.$this->slug.'%');
+			custax_rewrite_rules($this->slug, false);
+		}
 	}
 
 	function register_widget() {
@@ -135,21 +164,25 @@ class custax {
 		echo $before_widget;
 		echo $before_title . $title . $after_title;
 
-		$term_args = array('orderby' => 'name', 'show_count' => $c, 'hierarchical' => $h);
+		$term_args = array('orderby' => 'name', 'show_count' => $c, 'hierarchical' => $h, 'slug_value' => 1);
 
 		if ( $d ) {
-			$term_args['show_option_none'] = __('Select ').$this->plural;
+			$term_args['show_option_none'] = __('Select ').$this->name;
 			custax_wp_dropdown_terms($this->slug, $term_args);
 			?>
 			<script type='text/javascript'>
 			/* <![CDATA[ */
-			var dropdown = document.getElementById("cat");
-			function onCatChange() {
-				if ( dropdown.options[dropdown.selectedIndex].value > 0 ) {
-					location.href = "<?php echo get_option('home'); ?>/?cat="+dropdown.options[dropdown.selectedIndex].value;
+			var dropdown = document.getElementById("<?php echo $this->slug; ?>");
+			function on<?php echo ucfirst($this->slug); ?>Change() {
+				if ( dropdown.options[dropdown.selectedIndex].value != 0 && dropdown.options[dropdown.selectedIndex].value != -1 ) {
+					<?php if($this->rewrite_rules) { ?>
+					location.href = "<?php echo get_option('home'); ?>/<?php echo $this->slug; ?>/"+dropdown.options[dropdown.selectedIndex].value;
+					<?php } else { ?>
+					location.href = "<?php echo get_option('home'); ?>/?<?php echo $this->slug; ?>="+dropdown.options[dropdown.selectedIndex].value;
+					<?php } ?>
 				}
 			}
-			dropdown.onchange = onCatChange;
+			dropdown.onchange = on<?php echo ucfirst($this->slug); ?>Change;
 			/* ]]> */
 			</script>
 			<?php
@@ -284,27 +317,16 @@ class custax {
 		switch($this->object_type) {
 		case 'link':
 			$cols['links'] = __('Links');
-			$manage_col_hook = 'manage_link_custom_column';
-			$manage_col_filter = 'manage_link-manager_columns';
 		break;
 		case 'page':
 			$cols['pages'] = __('Pages');
-			$manage_col_hook = 'manage_pages_custom_column';
-			$manage_col_filter = 'manage_edit-pages_columns';
 		break;
 		default:
 			$cols['posts'] = __('Posts');
-			$manage_col_hook = 'manage_posts_custom_column';
-			$manage_col_filter = 'manage_edit_columns';
 		break;
 		}
 
 		register_column_headers('edit-'.$this->slug, $cols);
-
-		if($this->show_column) {
-			add_action($manage_col_hook, array(&$this, 'manage_column'), 10, 2);
-			add_filter($manage_col_filter, array(&$this, 'manage_column_name'));
-		}
 	}
 
 	function manage_column($name, $id) {
@@ -317,7 +339,7 @@ class custax {
 				$first = false;
 			else
 				echo ', ';
-			echo '<a href="' . $this->manage_page . '?taxonomy=' . $this->slug . '&amp;term=' . $term->slug . '">';
+			echo '<a href="' . $this->manage_page . '?' . $this->slug . '=' . $term->slug . '">';
 			echo $term->name;
 			echo '</a>';
 		}
@@ -588,7 +610,7 @@ class custax {
 		$row_class = 'alternate' == $row_class ? '' : 'alternate';
 
 		$count = number_format_i18n( $term->count );
-		$count = ( $count > 0 ) ? "<a href='{$this->manage_page}?taxonomy={$this->slug}&amp;term={$term->slug}'>$count</a>" : $count;
+		$count = ( $count > 0 ) ? "<a href='{$this->manage_page}?{$this->slug}={$term->slug}'>$count</a>" : $count;
 
 		$name = ( $name_override ? $name_override : $pad . ' ' . $term->name );
 		$name = apply_filters( 'term_name', $name );
@@ -600,125 +622,125 @@ class custax {
 		$columns = get_column_headers('edit-'.$this->slug);
 		$hidden = get_hidden_columns('edit-'.$this->slug);
 
-foreach ( $columns as $column_name => $column_display_name ) {
-$class = "class=\"$column_name column-$column_name\"";
+		foreach ( $columns as $column_name => $column_display_name ) {
+			$class = "class=\"$column_name column-$column_name\"";
 
-$style = '';
-if ( in_array($column_name, $hidden) )
-$style = ' style="display:none;"';
+			$style = '';
+			if ( in_array($column_name, $hidden) )
+				$style = ' style="display:none;"';
 
-$attributes = "$class$style";
+			$attributes = "$class$style";
 
-switch ($column_name) {
-case 'cb':
-$out .= '<th scope="row" class="check-column"> <input type="checkbox" name="delete_terms[]" value="' . $term->term_id . '" /></th>';
-break;
-case 'name':
-					$qe_data = get_term( $term, $this->slug, OBJECT, 'edit' );
-$out .= '<td ' . $attributes . '><strong><a class="row-title" href="' . $edit_link . '" title="' . attribute_escape(sprintf(__('Edit "%s"'), $name)) . '">' . $name . '</a></strong><br />';
-$actions = array();
-$actions['edit'] = '<a href="' . $edit_link . '">' . __('Edit') . '</a>';
-$actions['inline hide-if-no-js'] = '<a href="#" class="editinline">' . __('Quick&nbsp;Edit') . '</a>';
-$actions['delete'] = "<a class='submitdelete' href='" . wp_nonce_url("{$self}&amp;action=delete&amp;term_ID=$term->term_id", 'delete-term_' . $term->term_id) . "' onclick=\"if ( confirm('" . js_escape(sprintf(__("You are about to delete this term '%s'\n 'Cancel' to stop, 'OK' to delete.", CUSTAX_DOMAIN), $name )) . "') ) { return true;}return false;\">" . __('Delete') . "</a>";
-$action_count = count($actions);
-$i = 0;
-$out .= '<div class="row-actions">';
-foreach ( $actions as $action => $link ) {
-                        ++$i;
-                                                ( $i == $action_count ) ? $sep = '' : $sep = ' | ';
-                                                $out .= "<span class='$action'>$link$sep</span>";
-                                        }
-                                        $out .= '</div>';
-					$out .= '<div class="hidden" id="inline_' . $qe_data->term_id . '">';
-                                        $out .= '<div class="name">' . $qe_data->name . '</div>';
-                                        $out .= '<div class="slug">' . $qe_data->slug . '</div>';
-                                        $out .= '<div class="level">' . $level . '</div>';
-                                        $out .= '<div class="parent">' . $qe_data->parent . '</div></div></td>';
-                                        break;
-                                case 'slug':
-                                        $out .= "<td $attributes>$term->slug</td>";
-                                        break;
-                                case 'description':
-                                        $out .= "<td $attributes>$term->description</td>";
-                                        break;
-                                case 'posts':
-                                case 'pages':
-                                case 'links':
-                                        $attributes = 'class="'.$column_name.' column-'.$column_name.' num"' . $style;
-                                        $out .= "<td $attributes>$count</td>";
-                                        break;
-                        }
-                }
+			switch ($column_name) {
+			case 'cb':
+				$out .= '<th scope="row" class="check-column"> <input type="checkbox" name="delete_terms[]" value="' . $term->term_id . '" /></th>';
+			break;
+			case 'name':
+				$qe_data = get_term( $term, $this->slug, OBJECT, 'edit' );
+				$out .= '<td ' . $attributes . '><strong><a class="row-title" href="' . $edit_link . '" title="' . attribute_escape(sprintf(__('Edit "%s"'), $name)) . '">' . $name . '</a></strong><br />';
+				$actions = array();
+				$actions['edit'] = '<a href="' . $edit_link . '">' . __('Edit') . '</a>';
+				$actions['inline hide-if-no-js'] = '<a href="#" class="editinline">' . __('Quick&nbsp;Edit') . '</a>';
+				$actions['delete'] = "<a class='submitdelete' href='" . wp_nonce_url("{$self}&amp;action=delete&amp;term_ID=$term->term_id", 'delete-term_' . $term->term_id) . "' onclick=\"if ( confirm('" . js_escape(sprintf(__("You are about to delete this term '%s'\n 'Cancel' to stop, 'OK' to delete.", CUSTAX_DOMAIN), $name )) . "') ) { return true;}return false;\">" . __('Delete') . "</a>";
+				$action_count = count($actions);
+				$i = 0;
+				$out .= '<div class="row-actions">';
+				foreach ( $actions as $action => $link ) {
+					++$i;
+					( $i == $action_count ) ? $sep = '' : $sep = ' | ';
+					$out .= "<span class='$action'>$link$sep</span>";
+				}
+				$out .= '</div>';
+				$out .= '<div class="hidden" id="inline_' . $qe_data->term_id . '">';
+				$out .= '<div class="name">' . $qe_data->name . '</div>';
+				$out .= '<div class="slug">' . $qe_data->slug . '</div>';
+				$out .= '<div class="level">' . $level . '</div>';
+				$out .= '<div class="parent">' . $qe_data->parent . '</div></div></td>';
+			break;
+			case 'slug':
+				$out .= "<td $attributes>$term->slug</td>";
+			break;
+			case 'description':
+				$out .= "<td $attributes>$term->description</td>";
+			break;
+			case 'posts':
+			case 'pages':
+			case 'links':
+				$attributes = 'class="'.$column_name.' column-'.$column_name.' num"' . $style;
+				$out .= "<td $attributes>$count</td>";
+			break;
+			}
+		}
 
-                $out .= '</tr>';
+		$out .= '</tr>';
 
-                return $out;
-    }
+		return $out;
+	}
 
-    function _term_rows( $terms, &$count, $parent = 0, $level = 0, $page = 1, $per_page = 20 ) {
-        if ( empty($terms) ) {
-                $args = array('hide_empty' => 0);
-                if ( !empty($_GET['s']) )
-                        $args['search'] = $_GET['s'];
-                $terms = get_terms( $this->slug, $args );
-        }
+	function _term_rows( $terms, &$count, $parent = 0, $level = 0, $page = 1, $per_page = 20 ) {
+		if ( empty($terms) ) {
+			$args = array('hide_empty' => 0);
+			if ( !empty($_GET['s']) )
+				$args['search'] = $_GET['s'];
+			$terms = get_terms( $this->slug, $args );
+		}
 
-        if ( !$terms )
-                return false;
+		if ( !$terms )
+			return false;
 
-        $children = _get_term_hierarchy($this->slug);
+		$children = _get_term_hierarchy($this->slug);
 
-        $start = ($page - 1) * $per_page;
-        $end = $start + $per_page;
-        $i = -1;
-        ob_start();
-        foreach ( $terms as $term ) {
-                if ( $count >= $end )
-                        break;
+		$start = ($page - 1) * $per_page;
+		$end = $start + $per_page;
+		$i = -1;
+		ob_start();
+		foreach ( $terms as $term ) {
+			if ( $count >= $end )
+				break;
 
-                $i++;
+			$i++;
 
-                if ( $term->parent != $parent )
-                        continue;
+			if ( $term->parent != $parent )
+				continue;
 
-                // If the page starts in a subtree, print the parents.
-                if ( $count == $start && $term->parent > 0 ) {
-                        $my_parents = array();
-                        while ( $my_parent) {
-                                $my_parent = get_term($my_parent, $this->slug);
-                                $my_parents[] = $my_parent;
-                                if ( !$my_parent->parent )
-                                        break;
-                                $my_parent = $my_parent->parent;
-                        }
-                        $num_parents = count($my_parents);
-                        while( $my_parent = array_pop($my_parents) ) {
-                                echo "\t" . $this->_term_row( $my_parent, $level - $num_parents );
-                                $num_parents--;
-                        }
-                }
+			// If the page starts in a subtree, print the parents.
+			if ( $count == $start && $term->parent > 0 ) {
+				$my_parents = array();
+				while ( $my_parent) {
+					$my_parent = get_term($my_parent, $this->slug);
+					$my_parents[] = $my_parent;
+					if ( !$my_parent->parent )
+						break;
+					$my_parent = $my_parent->parent;
+				}
+				$num_parents = count($my_parents);
+				while( $my_parent = array_pop($my_parents) ) {
+					echo "\t" . $this->_term_row( $my_parent, $level - $num_parents );
+					$num_parents--;
+				}
+			}
 
-                if ( $count >= $start )
-                        echo "\t" . $this->_term_row( $term, $level );
+			if ( $count >= $start )
+				echo "\t" . $this->_term_row( $term, $level );
 
-                unset($terms[$i]); // Prune the working set
-                $count++;
+			unset($terms[$i]); // Prune the working set
+			$count++;
 
-                if ( isset($children[$term->term_id]) )
-                        $this->_term_rows( $terms, $count, $term->term_id, $level + 1, $page, $per_page );
+			if ( isset($children[$term->term_id]) )
+				$this->_term_rows( $terms, $count, $term->term_id, $level + 1, $page, $per_page );
 
-        }
+		}
 
-        $output = ob_get_contents();
-        ob_end_clean();
+		$output = ob_get_contents();
+		ob_end_clean();
 
-        echo $output;
-    }
+		echo $output;
+	}
 
-    function term_rows( $parent = 0, $level = 0, $terms = 0, $page = 1, $per_page = 20 ) {
-        $count = 0;
-        $this->_term_rows($terms, $count, $parent, $level, $page, $per_page);
-    }
+	function term_rows( $parent = 0, $level = 0, $terms = 0, $page = 1, $per_page = 20 ) {
+		$count = 0;
+		$this->_term_rows($terms, $count, $parent, $level, $page, $per_page);
+	}
 
     function manage() {
 	global $action, $term;
@@ -784,7 +806,7 @@ foreach ( $actions as $action => $link ) {
 		if ( empty($term_ID) ) { ?>
 			<div id="message" class="updated fade"><p><strong><?php _e('Nothing was selected for editing.', CUSTAX_DOMAIN); ?></strong></p></div>
 			<?php
-			break;
+			return;
 		}
 
 		do_action('edit_term_form_pre', $this->slug, $term); ?>

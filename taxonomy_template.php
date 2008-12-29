@@ -33,14 +33,10 @@ function custax_the_terms( $taxonomy, $before = '', $sep = '', $after = '' ) {
 		return false;
 
 	foreach ( $terms as $term ) {
-		/** TODO: links do not work, see http://trac.wordpress.org/ticket/8731
 		$link = get_term_link( $term, $taxonomy );
 		if ( is_wp_error( $link ) )
 			return false;
 		$term_links[] = '<a href="' . $link . '" rel="tag">' . $term->name . '</a>';
-		**/
-
-		$term_links[] = $term->name;
 	}
 
 	$term_links = apply_filters( "term_links-$taxonomy", $term_links );

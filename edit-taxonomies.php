@@ -41,11 +41,32 @@ function custax_get_taxes() {
 	return $results;
 }
 
-/**
- * custax_update_tax is not used right now without being called by 
- * custax_insert_tax since editing gets complicated and can break things
- **/
 function custax_update_tax($id, $row) {
+	global $wpdb;
+
+	$t = $row['tag_style']?1:0;
+	$s = $row['show_column']?1:0;
+	$r = $row['rewrite_rules']?1:0;
+
+	$query = 'UPDATE '.$wpdb->custom_taxonomies.' SET 
+		name = %s, plural = %s, tag_style = %d, show_column = %d, rewrite_rules = %d 
+		WHERE id = %d';
+
+	$query = $wpdb->prepare($query, $row['name'], $row['plural'], $t, $s, $r, $id);
+	$rtn = $wpdb->query( $query );
+
+	if(!is_wp_error($rtn)) {
+		$slug = $wpdb->get_var($wpdb->prepare('SELECT slug FROM '.$wpdb->custom_taxonomies.' WHERE id = %d', $id));
+		if($r)
+			custax_rewrite_rules($slug, true);
+		else
+			custax_rewrite_rules($slug, true, true);
+	}
+
+	return $rtn;
+}
+
+function custax_insert_tax($row) {
 	global $wpdb;
 
 	$h = $row['hierarchical']?1:0;
@@ -53,30 +74,23 @@ function custax_update_tax($id, $row) {
 	$t = $row['tag_style']?1:0;
 	$d = $row['descriptions']?1:0;
 	$s = $row['show_column']?1:0;
+	$r = $row['rewrite_rules']?1:0;
 
-	$args = array($row['name'], $row['plural'], $row['object_type'], $row['slug'], $h, $m, $t, $d, $s);
+	$query = 'INSERT INTO '.$wpdb->custom_taxonomies.' SET 
+		name = %s, plural = %s, object_type = %s, slug = %s, 
+		hierarchical = %d, multiple = %d, tag_style = %d, 
+		descriptions = %d, show_column = %d, rewrite_rules = %d';
 
-	$query = '';
-	if($id)
-		$query .= 'UPDATE ';
-	else
-		$query .= 'INSERT INTO ';
+	$query = $wpdb->prepare($query, 
+		$row['name'], $row['plural'], $row['object_type'], $row['slug'], 
+		$h, $m, $t, $d, $s, $r);
 
-	$query .= $wpdb->custom_taxonomies.' SET name = %s, plural = %s, object_type = %s, slug = %s, hierarchical = %d, multiple = %d, tag_style = %d, descriptions = %d, show_column = %d';
+	$rtn = $wpdb->query( $query );
 
-	if($id) {
-		$query .= ' WHERE id = %d';
-		$args[] = $id;
-	}
+	if(!is_wp_error($rtn))
+		custax_rewrite_rules($row['slug'], true);
 
-	array_unshift($args, $query);
-
-	$query = call_user_func_array(array($wpdb, 'prepare'), $args);
-	return $wpdb->query( $query );
-}
-
-function custax_insert_tax($row) {
-	return custax_update_tax( 0, $row );
+	return $rtn;
 }
 
 /**
@@ -106,7 +120,22 @@ function custax_delete_tax($id, $delete_terms = true) {
 function custax_tax_row( $tax, $class = '' ) {
 
 	$count = number_format_i18n( $tax->count );
-	//$count = ( $count > 0 ) ? "<a href='edit.php?tag=$tag->slug'>$count</a>" : $count;
+
+	if($count > 0) {
+		switch($tax->object_type) {
+		case 'link':
+			$base = 'link-manager.php';
+		break;
+		case 'page':
+			$base = 'edit-pages.php';
+		break;
+		default:
+			$base = 'edit.php';
+		break;
+		}
+
+		$count = "<a href='{$base}?page=custax_{$tax->slug}'>{$count}</a>";
+	}
 
 	$name = apply_filters( 'taxonomy_name', $tax->name );
 	$edit_link = $_SERVER['REQUEST_URI'].'&amp;action=edit&amp;tax_ID='.$tax->id;
@@ -118,7 +147,7 @@ function custax_tax_row( $tax, $class = '' ) {
 
 	$out .= '<td class="name column-name><strong><a class="row-title" href="' . $edit_link . '" title="' . attribute_escape(sprintf(__('Edit "%s"'), $name)) . '">' . $name . '</a></strong><br />';
 	$actions = array();
-//	$actions['edit'] = '<a href="' . $edit_link . '">' . __('Edit') . '</a>';
+	$actions['edit'] = '<a href="' . $edit_link . '">' . __('Edit') . '</a>';
 	$actions['delete'] = "<a class='submitdelete' href='" . wp_nonce_url($delete_link, 'delete-tax_' . $tax->id) . "' onclick=\"if ( confirm('" . js_escape(sprintf(__("You are about to delete this taxonomy '%s' along with ALL terms associated with this taxonomy.  Please be SURE you want to do this.\n 'Cancel' to stop, 'OK' to delete.", CUSTAX_DOMAINS), $name )) . "') ) { return true;}return false;\">" . __('Delete') . "</a>";
 	$action_count = count($actions);
 	$i = 0;
@@ -202,12 +231,11 @@ function custax_edit() {
 		}
 	break;
 
-	/** 
-	 * TODO: allow some limited form of editing (perhaps only things like 
-	 * show_columns and descriptions
-	 **/
-	/*
 	case 'edittax':
+		if(!$_POST['name'] || !$_POST['plural']) {
+			$message = 6;
+			break;
+		}
 		$tax_ID = (int) $_GET['tax_ID'];
 
 		$ret = custax_update_tax($tax_ID, $_POST);
@@ -217,7 +245,6 @@ function custax_edit() {
 			$message = 5;
 		}
 	break;
-	*/
 
 	case 'delete':
 		$tax_ID = (int) $_GET['tax_ID'];
@@ -231,18 +258,57 @@ function custax_edit() {
 		$message = 2;
 	break;
 
-	/*
 	case 'edit':
 		$tax_ID = (int) $_GET['tax_ID'];
 
 		$tax = custax_get_tax($tax_ID);
 
-		$subtitle = __('Edit Taxonomy', CUSTAX_DOMAIN).' "'.$tax->name.'"';
-		$submit = __('Edit Taxonomy', CUSTAX_DOMAIN);
-		$new_action = 'edittax';
+                $title = __('Edit').' '.$tax->name;
 
+                if ( empty($tax_ID) ) { ?>
+                        <div id="message" class="updated fade"><p><strong><?php _e('Nothing was selected for editing.', CUSTAX_DOMAIN); ?></strong></p></div>
+                        <?php
+                        return;
+                }
+		?>
+                <div class="wrap">
+                <?php screen_icon(); ?>
+                <h2><?php echo $title ?></h2>
+                <form name="edittax" id="edittax" method="post" action="<?php echo $self; ?>" class="validate">
+                <input type="hidden" name="action" value="edittax" />
+                <input type="hidden" name="tax_ID" value="<?php echo $tax->id ?>" />
+                <?php wp_original_referer_field(true, 'previous'); wp_nonce_field('update-tax_' . $tax_ID); ?>
+                        <table class="form-table">
+                                <tr class="form-field form-required">
+                                        <th scope="row" valign="top"><label for="name"><?php _e('Taxonomy Name', CUSTAX_DOMAIN) ?></label></th>
+                                        <td><input name="name" id="name" type="text" value="<?php echo attribute_escape($tax->name); ?>" size="40" aria-required="true" />
+                            <p><?php _e('The name is how the term appears on your site.', CUSTAX_DOMAIN); ?></p></td>
+                                </tr>
+				<tr class="form-field form-required">
+					<th scope="row" valign="top"><label for="plural"><?php _e('Taxonomy name plural', CUSTAX_DOMAIN) ?></label></th>
+					<td><input name="plural" id="plural" type="text" value="<?php echo attribute_escape($tax->plural); ?>" size="40" aria-required="true" />
+			    <p><?php _e('The plural form of the name.', CUSTAX_DOMAIN); ?></p></td>
+				</tr>
+				<tr class="form-field">
+					<th scope="row" valign="top"><label><?php _e('Miscellaneous options', CUSTAX_DOMAIN) ?></label></th>
+					<td>
+	<p><input name="tag_style" id="tag_style" type="checkbox" value="1" style="width:20px;margin-top:0;" <?php checked($tax->tag_style, true)?> />
+	<?php _e('Use tag-style selection, encouraging arbitrary term creation (works best with multiple selections, but not required)', CUSTAX_DOMAIN) ?>
+	<?php echo '<br /><strong>'.__('Note:').'</strong> '.__('This has not been implemented yet.', CUSTAX_DOMAIN); ?></p>
+
+	<p><input name="show_column" id="show_column" type="checkbox" value="1" style="width:20px;margin-top:0;" <?php checked($tax->show_column, true)?> />
+	<?php _e('Show taxonomy on object\'s manage screen', CUSTAX_DOMAIN) ?></p>
+
+	<p><input name="rewrite_rules" id="rewrite_rules" type="checkbox" value="1" style="width:20px;margin-top:0;" <?php checked($tax->rewrite_rules, true)?> />
+	<?php _e('Add permalink URL (/%slug%/%term%)', CUSTAX_DOMAIN) ?></p></td>
+				</tr>
+			</table>
+                <p class="submit"><input type="submit" class="button-primary" name="submit" value="<?php _e('Update Taxonomy', CUSTAX_DOMAIN); ?>" /></p>
+		</form>
+		</div> 
+		<?php
+		return;
 	break;
-	*/
 	}
 
 	$messages[1] = __('Taxonomy added.', CUSTAX_DOMAIN);
@@ -298,10 +364,6 @@ function custax_edit() {
 
 <div class="form-wrap">
 <h3><?php echo $subtitle; ?></h3>
-<p>
-<strong><?php _e('Note:'); ?></strong><br />
-<?php _e('Taxonomies cannot be edited, only created and deleted.  This is because of the logistical complexities of changing settings such as nested items and multiple selections.  If you want to change a setting, please note the terms and taxonomies and recreate them.  In the future we will try to add some limited editing so this is less annoying.', CUSTAX_DOMAIN); ?>
-</p>
 <form name="addtax" id="addtax" method="post" action="<?php echo $self ?>" class="add:the-list: validate">
 <input type="hidden" name="action" value="<?php echo $new_action ?>" />
 
@@ -320,7 +382,8 @@ function custax_edit() {
 <div class="form-field">
 	<label for="slug"><?php _e('Taxonomy slug', CUSTAX_DOMAIN) ?></label>
 	<input name="slug" id="slug" type="text" value="<?php echo $tax->slug; ?>" size="40" />
-    <p><?php _e('The &#8220;slug&#8221; is the <b>unique</b> URL-friendly version of the name. It is usually all lowercase and contains only letters, numbers, and hyphens.'); ?></p>
+    <p><?php _e('The &#8220;slug&#8221; is the <b>unique</b> URL-friendly version of the name. It is usually all lowercase and contains only letters, numbers, and hyphens.'); ?>
+	<?php echo '<br /><strong>'.__('Note:').'</strong> '.__('This is NOT editable.', CUSTAX_DOMAIN); ?></p>
 </div>
 
 <div class="form-field">
@@ -330,18 +393,20 @@ function custax_edit() {
 		<option value="page" <?php selected($tax->object_type, 'page'); ?>>Page</option>
 		<option value="link" <?php selected($tax->object_type, 'link'); ?>>Link</option>
 	</select>
-    <p><?php _e('The object is the type of data the taxonomy will apply to.', CUSTAX_DOMAIN); 
-?></p>
+    <p><?php _e('The object is the type of data the taxonomy will apply to.', CUSTAX_DOMAIN); ?>
+    <?php echo '<br /><strong>'.__('Note:').'</strong> '.__('This is NOT editable.', CUSTAX_DOMAIN); ?></p>
 </div>
 
 <div class="form-field">
 	<label><?php _e('Miscellaneous options', CUSTAX_DOMAIN) ?></label>
 
 	<p><input name="hierarchical" id="hierarchical" type="checkbox" value="1" style="width:20px;margin-top:0;" <?php checked($tax->hierarchical, true)?> />
-	<?php _e('Allow nested terms', CUSTAX_DOMAIN) ?></p>
+	<?php _e('Allow nested terms', CUSTAX_DOMAIN) ?>
+	<?php echo '<br /><strong>'.__('Note:').'</strong> '.__('This is NOT editable.', CUSTAX_DOMAIN); ?></p>
 
 	<p><input name="multiple" id="multiple" type="checkbox" value="1" style="width:20px;margin-top:0;" <?php checked($tax->multiple, true)?> />
 	<?php _e('Allow multiple selections for each item', CUSTAX_DOMAIN); ?>
+	<?php echo '<br /><strong>'.__('Note:').'</strong> '.__('This is NOT editable.', CUSTAX_DOMAIN); ?>
 	<?php echo '<br /><strong>'.__('Note:').'</strong> '.__('This has not been implemented yet, it will assume yes.', CUSTAX_DOMAIN); ?></p>
 
 	<p><input name="tag_style" id="tag_style" type="checkbox" value="1" style="width:20px;margin-top:0;" <?php checked($tax->tag_style, true)?> />
@@ -349,10 +414,14 @@ function custax_edit() {
 	<?php echo '<br /><strong>'.__('Note:').'</strong> '.__('This has not been implemented yet.', CUSTAX_DOMAIN); ?></p>
 
 	<p><input name="descriptions" id="descriptions" type="checkbox" value="1" style="width:20px;margin-top:0;" <?php checked($tax->descriptions, true)?> />
-	<?php _e('Allow descriptions', CUSTAX_DOMAIN) ?></p>
+	<?php _e('Allow descriptions', CUSTAX_DOMAIN) ?>
+	<?php echo '<br /><strong>'.__('Note:').'</strong> '.__('This is NOT editable.', CUSTAX_DOMAIN); ?>
 
 	<p><input name="show_column" id="show_column" type="checkbox" value="1" style="width:20px;margin-top:0;" <?php checked($tax->show_column, true)?> />
 	<?php _e('Show taxonomy on object\'s manage screen', CUSTAX_DOMAIN) ?></p>
+
+	<p><input name="rewrite_rules" id="rewrite_rules" type="checkbox" value="1" style="width:20px;margin-top:0;" <?php checked($tax->rewrite_rules, true)?> />
+	<?php _e('Add permalink URL (/%slug%/%term%)', CUSTAX_DOMAIN) ?></p>
 </div>
 
 <p class="submit"><input type="submit" class="button" name="submit" value="<?php echo $submit; ?>" /></p>

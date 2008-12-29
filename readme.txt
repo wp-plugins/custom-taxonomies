@@ -4,7 +4,7 @@ Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_i
 Tags: admin, administration, taxonomy, taxonomies
 Requires at least: 2.5
 Tested up to: 2.7
-Stable tag: 1.1
+Stable tag: 1.2
 
 Custom Taxonomies provides a full administrative interface for creating 
 and using taxonomies beyond the standard Tags and Categories.
@@ -23,6 +23,8 @@ the taxonomies themselves.  This plugin allows you to:
 *   Assign terms to posts, pages, and links just as you would with 
     categories and tags
 *   __NEW:__ Add widgets for your taxonomies into your site
+*   __NEW:__ Edit taxonomy settings
+*   __NEW:__ Permalinks!
 
 == Installation ==
 
@@ -38,9 +40,7 @@ Here are some examples of how you can implement the taxonomies in your themes:
 
 * To display a comma-seperated list of a post or page's taxonomy 'thing' in the format "Things: Thing 1, Thing 2" use `<?php if(function_exists('custax_the_terms')) custax_the_terms('thing', 'Things: ', ', ', '<br />'); ?>`
 
-* To display a list of all terms for the taxonomy 'thing' use `<?php if(function_exists('custax_list_terms')) custax_list_terms('thing'); ?>`
-
-Note that neither of these will provide links to a list of all objects with a particular term.  This will be fixed once a workaround is found for [this bug](http://trac.wordpress.org/ticket/8731).
+* To display a list of all terms for the taxonomy 'thing' use `<?php if(function_exists('custax_list_terms')) custax_list_terms('thing'); ?>` or add the 'Things' widget
 
 = Advanced Use =
 
@@ -53,11 +53,6 @@ will be contributing heavily to this shortly):
 *  [get\_terms](http://codex.wordpress.org/Function_Reference/get_terms)
 *  [is\_term](http://codex.wordpress.org/Function_Reference/is_term)
 *  [wp\_get\_object\_terms](http://codex.wordpress.org/Function_Reference/wp_get_object_terms)
-
-= Known Issues =
-
-There seems to be a bug in WordPress that makes listing objects in a taxonomy show page drafts.  There exist workaround, and they are being 
-investigated.  See [this bug](http://trac.wordpress.org/ticket/8731).
 
 == Frequently Asked Questions ==
 

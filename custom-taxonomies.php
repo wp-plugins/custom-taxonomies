@@ -6,7 +6,7 @@ Description: Custom Taxonomies provides a full administrative interface for
 creating and using taxonomies beyond the standard Tags and Categories offered 
 in the default WordPress installation.
 Author: Brian Krausz
-Version: 1.1
+Version: 1.2
 Author URI: http://nerdlife.net/
 */
 
@@ -39,7 +39,7 @@ require_once($custax_dir . '/taxonomy_template.php');
 global $wpdb;
 
 //the version of the DB
-define('CUSTAX_DB_VERSION', '1.0');
+define('CUSTAX_DB_VERSION', '1.2');
 
 //the translation domain
 define('CUSTAX_DOMAIN', 'custom_taxonomies');
@@ -78,12 +78,53 @@ wp_localize_script( 'inline-edit-custax', 'inlineEditL10n', array(
 add_action('admin_menu', 'custax_menu');
 add_action('wp_ajax_inline-save-custax', 'custax_inline_edit');
 
+add_filter('posts_results', 'custax_posts_results');
+
+//TODO: hack, either because of a glitch in WP_Query or my lack of understanding of it
+add_filter('mod_rewrite_rules', 'custax_mod_rewrite_rules');
+
 foreach($custax_style_pages AS $page)
 	add_action('admin_head-'.$page, 'custax_styles');
 
 function custax_menu() {
 	add_options_page('Taxonomies', 'Taxonomies', 9, 'custax_edit', 'custax_edit');
 }
+
+function custax_update_term_count( $terms ) {
+	global $wpdb;
+
+	foreach ( (array) $terms as $term ) {
+		$count = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $wpdb->term_relationships, $wpdb->posts WHERE $wpdb->posts.ID = $wpdb->term_relationships.object_id AND post_status = 'publish' AND term_taxonomy_id = %d", $term ) );
+		$wpdb->update( $wpdb->term_taxonomy, compact( 'count' ), array( 'term_taxonomy_id' => $term ) );
+	}
+}
+
+
+function custax_rewrite_rules($slug, $flush = false, $disable = false) {
+	global $wp_rewrite;
+
+	$rules = array(
+		$slug . '/(.+?)/feed/(feed|rdf|rss|rss2|atom)/?$' => 
+			'index.php?'.$slug.'=$matches[1]&feed=$matches[2]',
+		$slug . '/(.+?)/(feed|rdf|rss|rss2|atom)/?$' => 
+			'index.php?'.$slug.'=$matches[1]&feed=$matches[2]',
+		$slug . '/(.+?)/page/?([0-9]{1,})/?$' => 
+			'index.php?'.$slug.'=$matches[1]&paged=$matches[2]',
+		$slug . '/(.+?)/?$' => 
+			'index.php?'.$slug.'=$matches[1]',
+	);
+
+	foreach($rules AS $regex=>$redirect) {
+		if($disable)
+			unset($wp_rewrite->extra_rules_top[$regex]);
+		else
+			add_rewrite_rule($regex, $redirect, 'top');
+	}
+
+	if($flush)
+		$wp_rewrite->flush_rules();
+}
+
 
 function custax_style_implode($front, $back, $between = false) {
 	global $custax_taxonomies;
@@ -204,28 +245,85 @@ function custax_inline_edit() {
 function custax_install() {
 	global $wpdb;
 
-	if($wpdb->get_var("show tables like '$wpdb->custom_taxonomies'") != $wpdb->custom_taxonomies) {
-		$sql = "CREATE TABLE `{$wpdb->custom_taxonomies}` (
-			`id` int(8) unsigned NOT NULL auto_increment,
-			`slug` varchar(32) NOT NULL,
-			`name` varchar(32) NOT NULL,
-			`plural` varchar(32) NOT NULL,
-			`object_type` varchar(32) NOT NULL,
-			`hierarchical` tinyint(1) unsigned NOT NULL,
-			`multiple` tinyint(1) unsigned NOT NULL,
-			`tag_style` tinyint(1) unsigned NOT NULL,
-			`descriptions` tinyint(1) unsigned NOT NULL,
-			`show_column` tinyint(1) unsigned NOT NULL,
-			PRIMARY KEY  (`id`),
-			UNIQUE KEY `slug` (`slug`)
-		);";
+	$charset_collate = '';
+	if ( $wpdb->has_cap( 'collation' ) ) {
+		if ( ! empty($wpdb->charset) )
+			$charset_collate = "DEFAULT CHARACTER SET $wpdb->charset";
+		if ( ! empty($wpdb->collate) )
+			$charset_collate .= " COLLATE $wpdb->collate";
+	}
+
+	$sql = "CREATE TABLE {$wpdb->custom_taxonomies} (
+		id int(8) unsigned NOT NULL auto_increment,
+		slug varchar(32) NOT NULL,
+		name varchar(32) NOT NULL,
+		plural varchar(32) NOT NULL,
+		object_type varchar(32) NOT NULL,
+		hierarchical tinyint(1) unsigned NOT NULL,
+		multiple tinyint(1) unsigned NOT NULL,
+		tag_style tinyint(1) unsigned NOT NULL,
+		descriptions tinyint(1) unsigned NOT NULL,
+		show_column tinyint(1) unsigned NOT NULL,
+		rewrite_rules tinyint(1) unsigned NOT NULL,
+		PRIMARY KEY  (id),
+		UNIQUE KEY slug (slug)
+	) $charset_collate;";
+
+	$installed_ver = get_option( 'custax_db_version' );
+
+	if($wpdb->get_var("show tables like '$wpdb->custom_taxonomies'") != $wpdb->custom_taxonomies || 
+		$installed_ver != CUSTAX_DB_VERSION) {
 
 		require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
 		dbDelta($sql);
 
-		add_option('custax_db_version', CUSTAX_DB_VERSION);
+		if(isset($installed_ver))
+			update_option('custax_db_version', CUSTAX_DB_VERSION);
+		else
+			add_option('custax_db_version', CUSTAX_DB_VERSION);
 	}
+}
 
-	//TODO: update DB check (not needed until we actually change our DB)
+//TODO: Hack to work around http://trac.wordpress.org/ticket/8731
+function custax_posts_results($results) {
+	if(!is_tax())
+		return $results;
+
+	$new_results = array();
+	foreach((array)$results AS $row) {
+		if($row->post_status != 'inherit') {
+			$new_results[] = $row;
+		}
+	}
+	return $new_results;
+}
+
+//TODO: ugly, ugly hack, but luckily hardcoded to not matter
+function custax_mod_rewrite_rules($rules) {
+	global $wp_rewrite;
+	if(!$wp_rewrite->use_verbose_rules)
+		return $rules;
+
+	$rules_array = explode("\n", $rules);
+	$count_row = -1;
+	$new_rules_array = array();
+	$skipped = 0;
+	$i = 0;
+	foreach($rules_array AS $rule) {
+		if($count_row == -1 && strpos($rule, '[S=') !== false)
+			$count_row = $i;
+		if(strpos($rule, '$matches[') !== false) {
+			$skipped++;
+			continue;
+		}
+		$new_rules_array[$i++] = $rule;
+	}
+	$rewrite = $wp_rewrite->rewrite_rules();
+	$num_rules = count($rewrite) - $skipped;
+
+	if($count_row != -1)
+		$new_rules_array[$count_row] = "RewriteRule ^.*$ - [S=$num_rules]";
+
+	return implode("\n", $new_rules_array);
 }
 ?>

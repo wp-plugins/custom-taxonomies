@@ -2,9 +2,7 @@
 /*
 Plugin Name: Custom Taxonomies
 Plugin URI: http://nerdlife.net/custom-taxonomies/
-Description: Custom Taxonomies provides a full administrative interface for 
-creating and using taxonomies beyond the standard Tags and Categories offered 
-in the default WordPress installation.
+Description: Custom Taxonomies provides a full administrative interface for creating and using taxonomies beyond the standard Tags and Categories offered in the default WordPress installation.
 Author: Brian Krausz
 Version: 1.2
 Author URI: http://nerdlife.net/
@@ -30,6 +28,7 @@ Author URI: http://nerdlife.net/
 
 //the plugin directory
 $custax_dir = dirname(__FILE__);
+require_once($custax_dir . '/backwards_compatibility.php');
 require_once($custax_dir . '/custax.class.php');
 require_once($custax_dir . '/edit-taxonomies.php');
 require_once($custax_dir . '/taxonomy_functions.php');
@@ -37,6 +36,10 @@ require_once($custax_dir . '/taxonomy_template.php');
 
 //make sure we can use $wpdb: only needed so the activate check doesn't fail
 global $wpdb;
+
+if(!defined('CUSTAX_SETUP')) {
+//prevent multiple includes (done right after activation for some reason)
+define('CUSTAX_SETUP', true);
 
 //the version of the DB
 define('CUSTAX_DB_VERSION', '1.2');
@@ -246,7 +249,14 @@ function custax_install() {
 	global $wpdb;
 
 	$charset_collate = '';
-	if ( $wpdb->has_cap( 'collation' ) ) {
+
+	$can_collate = false;
+	if ( method_exists( $wpdb, 'supports_collation' ) )
+		$can_collate = $wpdb->supports_collation();
+	elseif ( method_exists( $wpdb, 'has_cap' ) )
+		$can_collate = $wpdb->has_cap( 'collation' );
+
+	if ( $can_collate ) {
 		if ( ! empty($wpdb->charset) )
 			$charset_collate = "DEFAULT CHARACTER SET $wpdb->charset";
 		if ( ! empty($wpdb->collate) )
@@ -326,5 +336,14 @@ function custax_mod_rewrite_rules($rules) {
 
 	return implode("\n", $new_rules_array);
 }
+}
 
+//needs to be seperate
+if(!function_exists('custax_old_version')) {
+function custax_old_version() {
+        global $wp_version;
+        $v = explode('.', $wp_version);
+        return ($v[0] < 2 || $v[1] < 7);
+}
+}
 ?>

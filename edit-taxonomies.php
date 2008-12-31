@@ -272,7 +272,7 @@ function custax_edit() {
                 }
 		?>
                 <div class="wrap">
-                <?php screen_icon(); ?>
+                <?php if(function_exists('scree_icon')) screen_icon(); ?>
                 <h2><?php echo $title ?></h2>
                 <form name="edittax" id="edittax" method="post" action="<?php echo $self; ?>" class="validate">
                 <input type="hidden" name="action" value="edittax" />
@@ -320,7 +320,7 @@ function custax_edit() {
 	$messages[7] = __('You\'ve used a reserved slug: try a different one.', CUSTAX_DOMAIN);
 ?>
 <div class="wrap nosubsub">
-<?php screen_icon(); ?>
+<?php if(function_exists('scree_icon')) screen_icon(); ?>
 <h2><?php echo wp_specialchars( $title ); ?></h2>
 
 <?php if ( isset($message) ) { ?>

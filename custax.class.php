@@ -69,6 +69,9 @@ class custax {
 		break;
 		}
 
+		if(custax_old_version())
+			$this->manage_page = 'edit.php';
+
 		register_taxonomy($this->slug, $this->object_type, $args);
 
 		add_action('wp_ajax_inline-save-custax', array(&$this, 'register_column'), 5);
@@ -757,7 +760,7 @@ class custax {
 	switch($action) {
 
 	case 'addterm':
-		check_admin_referer('add-term');
+		check_admin_referer('addterm');
 
 		if ( !current_user_can('manage_categories') )
 			wp_die(__('Cheatin&#8217; uh?'));
@@ -812,7 +815,7 @@ class custax {
 		do_action('edit_term_form_pre', $this->slug, $term); ?>
 
 		<div class="wrap">
-		<?php screen_icon(); ?>
+		<?php if(function_exists('scree_icon')) screen_icon(); ?>
 		<h2><?php echo $title ?></h2>
 		<div id="ajax-response"></div>
 		<form name="editterm" id="editterm" method="post" action="<?php echo $self; ?>" class="validate">
@@ -884,7 +887,7 @@ class custax {
 	$messages[6] = __('Terms deleted.', CUSTAX_DOMAIN); ?>
 
 	<div class="wrap nosubsub">
-	<?php screen_icon(); ?>
+	<?php if(function_exists('scree_icon')) screen_icon(); ?>
 	<h2><?php echo wp_specialchars( $title );
 	if ( isset($_GET['s']) && $_GET['s'] )
 		printf( '<span class="subtitle">' . __('Search results for &#8220;%s&#8221;') . '</span>', wp_specialchars( stripslashes($_GET['s']) ) ); ?>
@@ -999,7 +1002,7 @@ class custax {
 	<div id="ajax-response"></div>
 	<form name="addterm" id="addterm" method="post" action="<?php echo $self; ?>" class="add:the-list: validate">
 	<input type="hidden" name="action" value="addterm" />
-	<?php wp_original_referer_field(true, 'previous'); wp_nonce_field('add-'.$this->slug); ?>
+	<?php wp_original_referer_field(true, 'previous'); wp_nonce_field('addterm'); ?>
 
 	<div class="form-field form-required">
 		<label for="name"><?php _e('Name'); ?></label>

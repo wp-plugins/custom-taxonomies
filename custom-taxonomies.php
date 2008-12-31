@@ -339,11 +339,11 @@ function custax_mod_rewrite_rules($rules) {
 }
 
 //needs to be seperate
-if(!function_exists('custax_old_version')) {
+//if(!function_exists('custax_old_version')) {
 function custax_old_version() {
         global $wp_version;
         $v = explode('.', $wp_version);
         return ($v[0] < 2 || $v[1] < 7);
 }
-}
+//}
 ?>

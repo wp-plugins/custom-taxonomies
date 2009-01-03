@@ -1,5 +1,7 @@
 <?php
 
+if(custax_old_version()) {
+
 if(!function_exists('register_column_headers')) {
 function register_column_headers($screen, $columns) {
         global $_wp_column_headers;
@@ -128,3 +130,6 @@ function inline_edit_term_row($type) {
 <?php
 }
 }
+
+}
+?>

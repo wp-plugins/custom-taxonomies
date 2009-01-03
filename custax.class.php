@@ -428,7 +428,7 @@ class custax {
 	}
 
 	function ajax_add() {
-		check_ajax_referer( 'add-'.$this->slug );
+		check_ajax_referer( 'addterm' );
 		if ( !current_user_can( 'manage_categories' ) )
 			die('-1');
 

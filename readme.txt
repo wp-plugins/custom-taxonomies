@@ -2,9 +2,9 @@
 Contributors: bkrausz
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=2105034
 Tags: admin, administration, taxonomy, taxonomies
-Requires at least: 2.7
+Requires at least: 2.5
 Tested up to: 2.7
-Stable tag: 1.2.1
+Stable tag: 1.2.2
 
 Custom Taxonomies provides a full administrative interface for creating 
 and using taxonomies beyond the standard Tags and Categories.
@@ -26,7 +26,9 @@ the taxonomies themselves.  This plugin allows you to:
 *   __NEW:__ Edit taxonomy settings
 *   __NEW:__ Permalinks!
 
-__Note:__ 2.6 support coming soon, just have a bit more testing.
+__Note:__ 2.6/2.5 support is still in development, it's not themed 
+properly and isn't guarenteed to work properly.  [Please submit bug 
+reports here.](http://nerdlife.net/custom-taxonomies/)
 
 == Installation ==
 

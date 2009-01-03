@@ -2,7 +2,7 @@
 Contributors: bkrausz
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=2105034
 Tags: admin, administration, taxonomy, taxonomies
-Requires at least: 2.5
+Requires at least: 2.7
 Tested up to: 2.7
 Stable tag: 1.2.1
 
@@ -25,6 +25,8 @@ the taxonomies themselves.  This plugin allows you to:
 *   __NEW:__ Add widgets for your taxonomies into your site
 *   __NEW:__ Edit taxonomy settings
 *   __NEW:__ Permalinks!
+
+__Note:__ 2.6 support coming soon, just have a bit more testing.
 
 == Installation ==
 

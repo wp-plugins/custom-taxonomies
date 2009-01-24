@@ -200,7 +200,6 @@ class custax {
 
 	function widget_control($widget_args) {
 		global $wp_registered_widgets;
-		static $updated = false;
 
 		if ( is_numeric($widget_args) )
 			$widget_args = array( 'number' => $widget_args );
@@ -212,7 +211,7 @@ class custax {
 		if ( !is_array( $options ) )
 			$options = array();
 
-		if ( !$updated && !empty($_POST['sidebar']) ) {
+		if ( !$this->widget_updated && !empty($_POST['sidebar']) ) {
 			$sidebar = (string) $_POST['sidebar'];
 
 			$sidebars_widgets = wp_get_sidebars_widgets();
@@ -241,7 +240,7 @@ class custax {
 			}
 
 			update_option('widget_terms_'.$this->slug, $options);
-			$updated = true;
+			$this->widget_updated = true;
 		}
 
 		if ( -1 == $number ) {

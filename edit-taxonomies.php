@@ -48,6 +48,8 @@ function custax_update_tax($id, $row) {
 	$s = $row['show_column']?1:0;
 	$r = $row['rewrite_rules']?1:0;
 
+	$row = array_map('stripslashes', $row);
+
 	$query = 'UPDATE '.$wpdb->custom_taxonomies.' SET 
 		name = %s, plural = %s, tag_style = %d, show_column = %d, rewrite_rules = %d 
 		WHERE id = %d';
@@ -75,6 +77,8 @@ function custax_insert_tax($row) {
 	$d = $row['descriptions']?1:0;
 	$s = $row['show_column']?1:0;
 	$r = $row['rewrite_rules']?1:0;
+
+	$row = array_map('stripslashes', $row);
 
 	$query = 'INSERT INTO '.$wpdb->custom_taxonomies.' SET 
 		name = %s, plural = %s, object_type = %s, slug = %s, 

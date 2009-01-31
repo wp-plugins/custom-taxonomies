@@ -601,7 +601,7 @@ class custax {
 	}
 
 	function _term_row( $term, $level, $name_override = false ) {
-		$self = $_SERVER['SCRIPT_NAME'].'?page='.$_GET['page'];
+		$self = $_SERVER['REQUEST_URI'];
 
 		static $row_class = '';
 
@@ -747,7 +747,7 @@ class custax {
     function manage() {
 	global $action, $term;
 
-	$self = $_SERVER['SCRIPT_NAME'].'?page='.$_GET['page'];
+	$self = $_SERVER['REQUEST_URI'];
 
 	$title = $this->plural;
 
@@ -845,7 +845,7 @@ class custax {
 				<?php if($this->descriptions) : ?>
 				<tr class="form-field">
 					<th scope="row" valign="top"><label for="description"><?php _e('Description') ?></label></th>
-					<td><textarea name="description" id="description" rows="5" cols="40"><?php if ( isset( $term->slug ) ) echo attribute_escape(apply_filters('editable_slug', $term->slug)); ?></textarea>
+					<td><textarea name="description" id="description" rows="5" cols="40"><?php if ( isset( $term->description ) ) echo attribute_escape($term->description); ?></textarea>
 			    <p><?php _e('The description is not prominent by default, however some themes may show it.'); ?></p></td>
 				</tr>
 				<?php endif; ?>

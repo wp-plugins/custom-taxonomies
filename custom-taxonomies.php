@@ -90,7 +90,7 @@ foreach($custax_style_pages AS $custax_page)
 	add_action('admin_head-'.$custax_page, 'custax_styles');
 
 function custax_menu() {
-	add_options_page('Taxonomies', 'Taxonomies', 9, 'custax_edit', 'custax_edit');
+	add_options_page('Taxonomies', 'Taxonomies', 'manage_categories', 'custax_edit', 'custax_edit');
 }
 
 function custax_update_term_count( $terms ) {

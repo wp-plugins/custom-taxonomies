@@ -23,6 +23,41 @@
  * they are.
  **/
 
+function custax_term_cloud( $taxonomy, $args = '' ) {
+        $defaults = array(
+                'smallest' => 8, 'largest' => 22, 'unit' => 'pt', 'number' => 45,
+                'format' => 'flat', 'orderby' => 'name', 'order' => 'ASC',
+                'exclude' => '', 'include' => '', 'link' => 'view'
+        );
+        $args = wp_parse_args( $args, $defaults );
+
+        $terms = get_terms( $taxonomy, array_merge( $args, array( 'orderby' => 'count', 'order' => 'DESC' ) ) ); // Always query top tags
+
+        if ( empty( $terms ) )
+                return;
+
+        foreach ( $terms as $key => $term ) {
+                if ( 'edit' == $args['link'] )
+                        $link = get_edit_term_link( $term->term_id, $taxonomy );
+                else
+                        $link = get_term_link( $term->slug, $taxonomy );
+                if ( is_wp_error( $link ) )
+                        return false;
+
+                $terms[ $key ]->link = $link;
+                $terms[ $key ]->id = $term->term_id;
+        }
+
+        $return = wp_generate_tag_cloud( $terms, $args ); // Here's where those top tags get sorted according to $args
+
+        $return = apply_filters( 'wp_term_cloud', $return, $args );
+
+        if ( 'array' == $args['format'] )
+                return $return;
+
+        echo $return;
+}
+
 function custax_the_terms( $taxonomy, $before = '', $sep = '', $after = '' ) {
 	$terms = get_the_terms( 0, $taxonomy );
 

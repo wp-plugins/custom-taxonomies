@@ -196,7 +196,7 @@ function custax_styles() {
 		width: 94%;
 	}
 
-	#side-info-column .term-add select {
+	#side-info-column .term-add select, #side-info-column .term-select {
 		width: 100%;
 	}
 

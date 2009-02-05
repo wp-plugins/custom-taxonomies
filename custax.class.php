@@ -29,6 +29,7 @@ class custax {
 	var $descriptions;
 	var $show_column;
 	var $rewrite_rules;
+	var $tag_style;
 
 	function custax($tax) {
 		$this->id = $tax->id;
@@ -41,6 +42,7 @@ class custax {
 		$this->descriptions = $tax->descriptions;
 		$this->show_column = $tax->show_column;
 		$this->rewrite_rules = $tax->rewrite_rules;
+		$this->tag_style = $tax->tag_style;
 
 		$args = array(
 			//TODO: this will add the slug as a query var...this may not work if the slug is already a query var.  Add checks for this...
@@ -83,7 +85,13 @@ class custax {
 		add_action('admin_menu', array(&$this, 'register_column'), 5);
 		add_action('admin_menu', array(&$this, 'admin_menu'));
 
-		add_action('widgets_init', array(&$this, 'register_widget'));
+		//allow both selectors as widgets, why limit ourselves?
+		//if($this->tag_style) {
+			add_action('widgets_init', array(&$this, 'register_cloud_widget'));
+		//}
+		//else {
+			add_action('widgets_init', array(&$this, 'register_list_widget'));
+		//}
 
 		if($this->show_column) {
 			add_action($manage_col_hook, array(&$this, 'manage_column'), 10, 2);
@@ -112,6 +120,7 @@ class custax {
 		add_action( 'admin_head-' . $add_object_hook_end,  array(&$this, 'select_scripts'), 20 );
 		add_action( 'admin_head-' . $edit_object_hook_end, array(&$this, 'select_scripts'), 20 );
 
+		//handle rewrite/don't rewrite logic in function
 		add_action( 'init', array(&$this, 'rewrite_rules') );
 	}
 
@@ -125,7 +134,45 @@ class custax {
 		}
 	}
 
-	function register_widget() {
+	function register_cloud_widget() {
+		$widget_ops = array('classname' => 'widget_term_cloud_'.$this->slug, 'description' => __( 'Your most used '.strtolower($this->plural).' in cloud format') );
+		wp_register_sidebar_widget('term_cloud_'.$this->slug, $this->name.' '.__('Cloud', CUSTAX_DOMAIN), array(&$this, 'cloud_widget'), $widget_ops);
+		wp_register_widget_control('term_cloud_'.$this->slug, $this->name.' '.__('Cloud', CUSTAX_DOMAIN), array(&$this, 'cloud_widget_control') );
+	}
+
+	function cloud_widget($args) {
+		extract($args);
+		$options = get_option('widget_term_cloud_'.$this->slug);
+		$title = empty($options['title']) ? $this->plural : apply_filters('widget_title', $options['title']);
+
+		echo $before_widget;
+		echo $before_title . $title . $after_title;
+		custax_term_cloud($this->slug);
+		echo $after_widget;
+	}
+
+	function cloud_widget_control() {
+		$options = $newoptions = get_option('widget_term_cloud_'.$this->slug);
+
+		if ( isset($_POST['term-cloud-'.$this->slug.'-submit']) ) {
+			$newoptions['title'] = strip_tags(stripslashes($_POST['term-cloud-'.$this->slug.'-title']));
+		}
+
+		if ( $options != $newoptions ) {
+			$options = $newoptions;
+			update_option('widget_term_cloud_'.$this->slug, $options);
+		}
+
+		$title = attribute_escape( $options['title'] );
+?>
+		<p><label for="term-cloud-<?php echo $this->slug; ?>-title">
+		<?php _e('Title:') ?> <input type="text" class="widefat" id="term-cloud-<?php echo $this->slug; ?>-title" name="term-cloud-<?php echo $this->slug; ?>-title" value="<?php echo $title ?>" /></label>
+		</p>
+		<input type="hidden" name="term-cloud-<?php echo $this->slug; ?>-submit" id="term-cloud-<?php echo $this->slug; ?>-submit" value="1" />
+<?php
+	}
+
+	function register_list_widget() {
 		if ( !$options = get_option( 'widget_terms_'.$this->slug ) )
 			$options = array();
 
@@ -134,20 +181,20 @@ class custax {
 		foreach ( (array) array_keys($options) as $o ) {
 			$id = "terms-$this->slug-$o";
 
-			wp_register_sidebar_widget($id, $this->plural, array(&$this, 'widget'), $widget_ops, array('number' => $o));
-			wp_register_widget_control($id, $this->plural, array(&$this, 'widget_control'), array( 'id_base' => 'terms-'.$this->slug ), array( 'number' => $o ) );
+			wp_register_sidebar_widget($id, $this->plural, array(&$this, 'list_widget'), $widget_ops, array('number' => $o));
+			wp_register_widget_control($id, $this->plural, array(&$this, 'list_widget_control'), array( 'id_base' => 'terms-'.$this->slug ), array( 'number' => $o ) );
 		}
 
 		// If there are none, we register the widget's existance with a generic template
 		if ( !$id ) {
 			$id = "terms-$this->slug-1";
 
-			wp_register_sidebar_widget($id, $this->plural, array(&$this, 'widget'), $widget_ops, array('number' => -1));
-			wp_register_widget_control($id, $this->plural, array(&$this, 'widget_control'), array( 'id_base' => 'terms-'.$this->slug ), array( 'number' => -1 ) );
+			wp_register_sidebar_widget($id, $this->plural, array(&$this, 'list_widget'), $widget_ops, array('number' => -1));
+			wp_register_widget_control($id, $this->plural, array(&$this, 'list_widget_control'), array( 'id_base' => 'terms-'.$this->slug ), array( 'number' => -1 ) );
 		}
 	}
 
-	function widget($args, $widget_args = 1) {
+	function list_widget($args, $widget_args = 1) {
 		extract($args, EXTR_SKIP);
 		if ( is_numeric($widget_args) )
 			$widget_args = array( 'number' => $widget_args );
@@ -198,7 +245,7 @@ class custax {
 		echo $after_widget;
 	}
 
-	function widget_control($widget_args) {
+	function list_widget_control($widget_args) {
 		global $wp_registered_widgets;
 
 		if ( is_numeric($widget_args) )
@@ -288,8 +335,16 @@ class custax {
 
 	function save($id) {
 		$terms = $_POST['post_' . $this->slug];
-		if(empty($terms) || !is_array($terms))
+		if(empty($terms)) {
 			return;
+		}
+		if(!is_array($terms)) {
+			$terms = array($terms);
+		}
+		if(!$this->multiple) {
+			$terms = array_slice($terms, 0, 1);
+		}
+
 		$terms = array_map('intval', $terms);
 		$terms = array_unique($terms);
 
@@ -485,17 +540,28 @@ class custax {
 	}
 
 	function select_enqueue_scripts() {
-		wp_enqueue_script('jquery-ui-tabs');
+		if($this->multiple) {
+			wp_enqueue_script('jquery-ui-tabs');
+		}
 	}
 
 	function select_scripts() {
-//TODO: allow multiple = 0
-//TODO: does this work with multiple taxonomies?
-//TODO: can we make this one function for all taxonomies and not dynamically generate it?
+		//TODO: does all this work with multiple taxonomies?
+		//TODO: can we make this one function for all taxonomies and not dynamically generate it?
+		if($this->multiple) {
+			$this->select_scripts_checkbox();
+		}
+		else {
+			//TODO: this isn't written, so no auto-add
+			//$this->select_scripts_dropdown();
+		}
+	}
+
+	function select_scripts_checkbox() {
 	?>
 	<script type="text/javascript">
 	jQuery(document).ready(function() {
-	// Tabs
+
 	var termTabs =jQuery('#<?php echo $this->slug; ?>-tabs').tabs();
 
 	// Ajax
@@ -563,6 +629,28 @@ class custax {
 	}
 
 	function select($object) {
+		if($this->multiple) {
+			$this->select_checkbox($object);
+			//TODO: put this in dropdown too
+			if ( current_user_can('manage_categories') ) {
+				$this->select_add();
+			}
+		}
+		else {
+			$this->select_dropdown($object);
+		}
+	}
+
+	function select_dropdown($object) {
+		$terms = wp_get_object_terms($object->ID, $this->slug, array('fields' => 'ids'));
+		$id = 0;
+		if(is_array($terms) && count($terms) > 0) {
+			$id = $terms[0];
+		}
+		custax_wp_dropdown_terms($this->slug, array('selected' => $id, 'hierarchical' => $this->hierarchical, 'hide_empty' => 0, 'name' => 'post_'.$this->slug, 'class' => 'term-select' ));
+	}
+
+	function select_checkbox($object) {
 	?>
 	<ul id="<?php echo $this->slug; ?>-tabs" class="ui-tabs-nav">
 		<li class="ui-tabs-selected"><a tabindex="3" href="#<?php echo $this->slug; ?>-all">All <?php echo $this->plural; ?></a></li>
@@ -580,8 +668,11 @@ class custax {
 		<?php custax_wp_term_checklist($this->slug, $object->ID, false, false, $popular_ids) ?>
 		</ul>
 	</div>
+	<?php
+	}
 
-	<?php if ( current_user_can('manage_categories') ) : ?>
+	function select_add() {
+	?>
 	<div id="<?php echo $this->slug; ?>-adder" class="wp-hidden-children">
 		<h4><a id="<?php echo $this->slug; ?>-add-toggle" href="#<?php echo $this->slug; ?>-add" class="hide-if-no-js" tabindex="3"><?php echo __( '+ Add New' ).' '.$this->name; ?></a></h4>
 		<p id="<?php echo $this->slug; ?>-add" class="wp-hidden-child term-add">
@@ -597,7 +688,6 @@ class custax {
 	        </p>
 	</div>
 	<?php
-	endif;
 	}
 
 	function _term_row( $term, $level, $name_override = false ) {

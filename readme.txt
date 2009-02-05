@@ -4,7 +4,7 @@ Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_i
 Tags: admin, administration, taxonomy, taxonomies
 Requires at least: 2.5
 Tested up to: 2.7
-Stable tag: 1.3
+Stable tag: 2.3
 
 Custom Taxonomies provides a full administrative interface for creating 
 and using taxonomies beyond the standard Tags and Categories.
@@ -22,9 +22,10 @@ the taxonomies themselves.  This plugin allows you to:
 *   Manage each taxonomy's terms in a full AJAX-interface
 *   Assign terms to posts, pages, and links just as you would with 
     categories and tags
-*   __NEW:__ Add widgets for your taxonomies into your site
-*   __NEW:__ Edit taxonomy settings
-*   __NEW:__ Permalinks!
+*   Setup permalinks
+*   Add widgets for your taxonomies into your site
+*   __NEW:__ Term Clouds!!
+*   __NEW:__ Support for single-selection taxonomies!!
 
 __Note:__ 2.6/2.5 support is still in development, it's not themed 
 properly and isn't guarenteed to work properly.  [Please submit bug 
@@ -40,11 +41,15 @@ reports here.](http://nerdlife.net/custom-taxonomies/)
 
 = Example Use =
 
-Here are some examples of how you can implement the taxonomies in your themes:
+* There are two widget types for each taxonomy you create: a category-style list, and a tag-style cloud.  You can assign these after creating a taxonomy via Appearance->Widgets.
 
 * To display a comma-seperated list of a post or page's taxonomy 'thing' in the format "Things: Thing 1, Thing 2" use `<?php if(function_exists('custax_the_terms')) custax_the_terms('thing', 'Things: ', ', ', '<br />'); ?>`
 
+Additionally, we have provided these functions to make using taxonomies in code/themes easier:
+
 * To display a list of all terms for the taxonomy 'thing' use `<?php if(function_exists('custax_list_terms')) custax_list_terms('thing'); ?>` or add the 'Things' widget
+
+* To display a tag cloud of terms for the taxonomy 'thing' use `<?php if(function_exists('custax_term_cloud')) custax_term_cloud('thing'); ?>` or add the 'Thing Cloud' widget
 
 = Advanced Use =
 

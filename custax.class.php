@@ -335,7 +335,7 @@ class custax {
 
 	function save($id) {
 		$terms = $_POST['post_' . $this->slug];
-		if(empty($terms)) {
+		if(empty($terms) || $terms == -1) {
 			return;
 		}
 		if(!is_array($terms)) {
@@ -647,7 +647,7 @@ class custax {
 		if(is_array($terms) && count($terms) > 0) {
 			$id = $terms[0];
 		}
-		custax_wp_dropdown_terms($this->slug, array('selected' => $id, 'hierarchical' => $this->hierarchical, 'hide_empty' => 0, 'name' => 'post_'.$this->slug, 'class' => 'term-select' ));
+		custax_wp_dropdown_terms($this->slug, array('selected' => $id, 'hierarchical' => $this->hierarchical, 'hide_empty' => 0, 'name' => 'post_'.$this->slug, 'class' => 'term-select', 'show_option_none' => 'None' ));
 	}
 
 	function select_checkbox($object) {

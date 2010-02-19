@@ -335,8 +335,8 @@ class custax {
 
 	function save($id) {
 		$terms = $_POST['post_' . $this->slug];
-		if(empty($terms)) {
-			return;
+		if(!$terms) {
+			$terms = array();
 		}
 		if($terms == -1) {
 			$terms = array();

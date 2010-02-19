@@ -4,7 +4,7 @@ Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_i
 Tags: admin, administration, taxonomy, taxonomies
 Requires at least: 2.5
 Tested up to: 2.7
-Stable tag: 1.2.4
+Stable tag: 1.2.5
 
 Custom Taxonomies provides a full administrative interface for creating 
 and using taxonomies beyond the standard Tags and Categories.
